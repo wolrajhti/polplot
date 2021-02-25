@@ -1,28 +1,39 @@
-export class Line {
-  constructor(
-    public x1: number,
-    public y1: number,
-    public x2: number,
-    public y2: number
-  ) {
+import { Vector2 } from "./vector2";
 
+export class Line {
+  v1: Vector2;
+  v2: Vector2;
+  constructor(
+    x1?: number,
+    y1?: number,
+    x2?: number,
+    y2?: number
+  ) {
+    this.v1 = new Vector2(x1, y1);
+    this.v2 = new Vector2(x2, y2);
+  }
+  get x1(): number {
+    return this.v1.x;
+  }
+  get y1(): number {
+    return this.v1.y;
+  }
+  get x2(): number {
+    return this.v2.x;
+  }
+  get y2(): number {
+    return this.v2.y;
   }
   len(): number {
-    return Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
+    return this.v2.sub(this.v1).len();
   }
-  xBefore(t: number): number {
-    return this.x1 - t * (this.x2 - this.x1) / this.len();
+  before(t: number): Vector2 {
+    return this.v1.add(this.v2.sub(this.v1).mul(-t / this.len()));
   }
-  yBefore(t: number): number {
-    return this.y1 - t * (this.y2 - this.y1) / this.len();
+  after(t: number): Vector2 {
+    return this.v1.add(this.v2.sub(this.v1).mul((this.len() + t) / this.len()));
   }
-  xAfter(t: number): number {
-    return this.x1 + (this.len() + t) * (this.x2 - this.x1) / this.len();
-  }
-  yAfter(t: number): number {
-    return this.y1 + (this.len() + t) * (this.y2 - this.y1) / this.len();
-  }
-  intersect(other: Line) {
-
+  intersectionWith(other: Line): Vector2 {
+    return this.v1.intersection(this.v2, other.v1, other.v2);
   }
 }

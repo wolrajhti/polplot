@@ -1,6 +1,5 @@
 import { Line } from './line';
-
-
+import { InterRenderer } from './interRenderer';
 
 export class LineRenderer {
   private svgLines = new Map<Line, SVGLineElement>();
@@ -10,13 +9,16 @@ export class LineRenderer {
   private startCircles = new Map<SVGCircleElement, Line>();
   private endCircles = new Map<SVGCircleElement, Line>();
   private draggedCircle: SVGCircleElement;
+
+  private interRenderer = new InterRenderer(this.svg);
+
   constructor(readonly svg: SVGSVGElement) {
 
   }
   isDragging(): boolean {
     return !!this.draggedCircle;
   }
-  draw(line: Line) {
+  draw(lines: Line[], line: Line) {
     let svgLine: SVGLineElement;
     let startSvgCircle: SVGCircleElement;
     let endSvgCircle: SVGCircleElement;
@@ -47,27 +49,26 @@ export class LineRenderer {
     svgLine.setAttribute('y1', line.y1.toFixed());
     svgLine.setAttribute('x2', line.x2.toFixed());
     svgLine.setAttribute('y2', line.y2.toFixed());
-    startSvgCircle.setAttribute('cx', line.xBefore(10).toFixed());
-    startSvgCircle.setAttribute('cy', line.yBefore(10).toFixed());
-    endSvgCircle.setAttribute('cx', line.xAfter(10).toFixed());
-    endSvgCircle.setAttribute('cy', line.yAfter(10).toFixed());
+    startSvgCircle.setAttribute('cx', line.before(10).x.toFixed());
+    startSvgCircle.setAttribute('cy', line.before(10).y.toFixed());
+    endSvgCircle.setAttribute('cx', line.after(10).x.toFixed());
+    endSvgCircle.setAttribute('cy', line.after(10).y.toFixed());
+    this.interRenderer.addLine(lines, line);
   }
   drag(circle: SVGCircleElement): void {
     this.draggedCircle = circle;
   }
-  moveTo(x: number, y: number): void {
+  moveTo(lines: Line[], x: number, y: number): void {
     if (this.startCircles.has(this.draggedCircle)) {
       const line = this.startCircles.get(this.draggedCircle);
       const newLine = new Line(x, y, line.x2, line.y2);
-      line.x1 = newLine.xBefore(-10);
-      line.y1 = newLine.yBefore(-10);
-      this.draw(line);
+      line.v1 = newLine.before(-10);
+      this.draw(lines, line);
     } else if (this.endCircles.has(this.draggedCircle)) {
       const line = this.endCircles.get(this.draggedCircle);
       const newLine = new Line(line.x1, line.y1, x, y);
-      line.x2 = newLine.xAfter(-10);
-      line.y2 = newLine.yAfter(-10);
-      this.draw(line);
+      line.v2 = newLine.after(-10);
+      this.draw(lines, line);
     }
   }
   drop(): void {

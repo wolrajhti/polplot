@@ -34,13 +34,13 @@ svg.addEventListener('mouseup', event => {
       x1 = null;
       y1 = null;
       lines.push(line);
-      lineRenderer.draw(line);
+      lineRenderer.draw(lines, line);
     }
   }
 });
 
 svg.addEventListener('mousemove', event => {
-  lineRenderer.moveTo(event.clientX, event.clientY);
+  lineRenderer.moveTo(lines, event.clientX, event.clientY);
 });
 
 body.appendChild(svg);
