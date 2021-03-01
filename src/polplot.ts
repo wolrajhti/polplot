@@ -4,6 +4,7 @@ import { Vector2 } from "./vector2";
 
 export class PolPlot {
   lines: Line[] = [];
+  intersectionTimes: number[][] = [];
   constructor(readonly renderer: PolplotRenderer) {
     let draggedLine: Line;
     let draggedVector2: Vector2;
@@ -14,8 +15,7 @@ export class PolPlot {
       if (!draggedLine) {
         draggedLine = new Line(event.clientX, event.clientY, event.clientX, event.clientY);
         draggedVector2 = draggedLine.v2;
-        this.lines.push(draggedLine);
-        this.renderer.drawLine(draggedLine, false, false);
+        this.addLine(draggedLine);
       }
     });
 
@@ -53,8 +53,35 @@ export class PolPlot {
         } else {
           draggedLine.update(event.movementX, event.movementY, event.movementX, event.movementY);
         }
+        this.updateIntersectionTimes(draggedLine);
         this.renderer.drawLine(draggedLine, draggedLine === hoveredLine, draggedLine === selectedLine);
       }
     });
+  }
+  addLine(line: Line): void {
+    this.addIntersectionTimes(line);
+    this.lines.push(line);
+    this.renderer.drawLine(line, false, false);
+  }
+  addIntersectionTimes(line: Line): void {
+    const intersectionTimes: number[] = [];
+    let times: Vector2;
+    for (let i = 0; i < this.lines.length; i++) {
+      times = this.lines[i].intersectionTimesWith(line);
+      this.intersectionTimes[i].push(times.x);
+      intersectionTimes.push(times.y);
+    }
+    this.intersectionTimes.push(intersectionTimes);
+  }
+  updateIntersectionTimes(line: Line): void {
+    const index = this.lines.indexOf(line);
+    let times: Vector2;
+    for (let i = 0; i < this.lines.length; i++) {
+      if (i !== index) {
+        times = this.lines[i].intersectionTimesWith(line);
+        this.intersectionTimes[i][index] = times.x;
+        this.intersectionTimes[index][i] = times.y;
+      }
+    }
   }
 }
