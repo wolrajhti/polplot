@@ -33,7 +33,13 @@ export class Line {
   after(t: number): Vector2 {
     return this.v1.add(this.v2.sub(this.v1).mul((this.len() + t) / this.len()));
   }
-  intersectionWith(other: Line): Vector2 {
-    return this.v1.intersection(this.v2, other.v1, other.v2);
+  intersectionTimesWith(other: Line): Vector2 {
+    return this.v1.intersectionTimes(this.v2, other.v1, other.v2);
+  }
+  update(dx1 = 0, dy1 = 0, dx2 = 0, dy2 = 0): void {
+    this.v1.x += dx1;
+    this.v1.y += dy1;
+    this.v2.x += dx2;
+    this.v2.y += dy2;
   }
 }

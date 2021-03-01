@@ -108,4 +108,19 @@ export class Vector2 {
   intersection(to: Vector2, start: Vector2, end: Vector2): Vector2 | undefined {
     return Vector2.intersection(this, to, start, end);
   }
+  angle(other?: Vector2): number {
+    if (other) {
+       const a1 = this.angle();
+       const a2 = other.angle();
+       if (a2 < a1) {
+        return a2 + 2 * Math.PI - a1;
+       } else {
+        return a2 - a1;
+       }
+    } else if (this.y > 0) {
+      return Math.acos(this.x / this.len());
+    } else {
+      return 2 * Math.PI - Math.acos(this.x / this.len());
+    }
+  }
 }
