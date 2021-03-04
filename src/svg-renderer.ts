@@ -1,5 +1,6 @@
 import { ClickHandler, PolplotRenderer } from "./interfaces/polplot-renderer";
 import { Line } from "./line";
+import { Vector2 } from "./vector2";
 
 const gTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 gTemplate.setAttribute('stroke', 'black');
@@ -22,13 +23,21 @@ gTemplate.appendChild(lineTemplate);
 gTemplate.appendChild(anchorTemplate);
 gTemplate.appendChild(anchorTemplate.cloneNode());
 
+const pointTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+pointTemplate.setAttribute('fill', 'green');
+pointTemplate.setAttribute('r', '3');
+
 export class SvgRenderer implements PolplotRenderer {
   readonly svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  private intersectionContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private svgGByLine = new Map<Line, SVGGElement>();
   private lineBySvgG = new Map<SVGGElement, Line>();
   private onMouseDown: (event: MouseEvent) => any;
   private onMouseUp: (event: MouseEvent) => any;
   private onMouseMove: (event: MouseEvent) => any;
+  constructor() {
+    this.svg.appendChild(this.intersectionContainer);
+  }
   clickHandlerWrapper(clickHandler: ClickHandler): (event: MouseEvent) => any {
     return event => {
       const elementAt = document.elementFromPoint(event.clientX, event.clientY);
@@ -108,5 +117,14 @@ export class SvgRenderer implements PolplotRenderer {
       this.svg.removeChild(svgG);
       this.svgGByLine.delete(line);
     }
+  }
+  drawPoint(point: Vector2): void {
+    const svgCircle = pointTemplate.cloneNode() as SVGCircleElement;
+    svgCircle.setAttribute('cx', point.x.toFixed());
+    svgCircle.setAttribute('cy', point.y.toFixed());
+    this.intersectionContainer.appendChild(svgCircle);
+  }
+  clearIntersections(): void {
+    this.intersectionContainer.childNodes.forEach(childNode => this.intersectionContainer.removeChild(childNode));
   }
 }

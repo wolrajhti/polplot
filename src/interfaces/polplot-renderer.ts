@@ -6,7 +6,9 @@ export type ClickHandler = (event: MouseEvent, clickedLine?: Line, clickedVector
 export interface PolplotRenderer {
   drawLine(line: Line, isHovered: boolean, isSelected: boolean): void;
   eraseLine(line: Line): void;
-  setMouseDownHandler(clickHandler: ClickHandler): void
-  setMouseUpHandler(clickHandler: ClickHandler): void
-  setMouseMoveHandler(clickHandler: ClickHandler): void
+  setMouseDownHandler(clickHandler: ClickHandler): void;
+  setMouseUpHandler(clickHandler: ClickHandler): void;
+  setMouseMoveHandler(clickHandler: ClickHandler): void;
+  drawPoint(point: Vector2): void;
+  clearIntersections(): void;
 }

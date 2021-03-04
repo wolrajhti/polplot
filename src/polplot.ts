@@ -5,6 +5,7 @@ import { Vector2 } from "./vector2";
 export class PolPlot {
   lines: Line[] = [];
   intersectionTimes: number[][] = [];
+  intersectionPoints: Vector2[][] = [];
   constructor(readonly renderer: PolplotRenderer) {
     let draggedLine: Line;
     let draggedVector2: Vector2;
@@ -65,13 +66,24 @@ export class PolPlot {
   }
   addIntersectionTimes(line: Line): void {
     const intersectionTimes: number[] = [];
+    const intersectionPoints: Vector2[] = [];
     let times: Vector2;
     for (let i = 0; i < this.lines.length; i++) {
       times = this.lines[i].intersectionTimesWith(line);
       this.intersectionTimes[i].push(times.x);
+      this.intersectionPoints[i].push(
+        0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
+          ? this.lines[i].v1.add(this.lines[i].v2.sub(this.lines[i].v1).mul(times.x))
+          : null
+      );
       intersectionTimes.push(times.y);
+      intersectionPoints.push(null);
     }
+    intersectionTimes.push(NaN);
+    intersectionPoints.push(null);
     this.intersectionTimes.push(intersectionTimes);
+    this.intersectionPoints.push(intersectionPoints);
+    this.renderIntersections();
   }
   updateIntersectionTimes(line: Line): void {
     const index = this.lines.indexOf(line);
@@ -81,7 +93,27 @@ export class PolPlot {
         times = this.lines[i].intersectionTimesWith(line);
         this.intersectionTimes[i][index] = times.x;
         this.intersectionTimes[index][i] = times.y;
+        if (i < index) {
+          this.intersectionPoints[i][index] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
+            ? this.lines[i].v1.add(this.lines[i].v2.sub(this.lines[i].v1).mul(times.x))
+            : null;
+        } else {
+          this.intersectionPoints[index][i] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
+            ? this.lines[i].v1.add(this.lines[i].v2.sub(this.lines[i].v1).mul(times.x))
+            : null;
+        }
       }
     }
+    this.renderIntersections();
+  }
+  renderIntersections(): void {
+    this.renderer.clearIntersections();
+    this.intersectionPoints.forEach(intersectionPoints => {
+      intersectionPoints.forEach(intersectionPoint => {
+        if (intersectionPoint) {
+          this.renderer.drawPoint(intersectionPoint);
+        }
+      });
+    });
   }
 }
