@@ -1,5 +1,6 @@
 import { ClickHandler, PolplotRenderer } from "./interfaces/polplot-renderer";
 import { Line } from "./line";
+import { Polygon } from "./polygon";
 import { Vector2 } from "./vector2";
 
 const gTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -27,9 +28,15 @@ const pointTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'ci
 pointTemplate.setAttribute('fill', 'green');
 pointTemplate.setAttribute('r', '3');
 
+const polygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+polygonTemplate.setAttribute('fill', 'green');
+polygonTemplate.setAttribute('stroke-width', '3');
+polygonTemplate.setAttribute('stroke', 'grey');
+
 export class SvgRenderer implements PolplotRenderer {
   readonly svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   private intersectionContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  private polygonContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private svgGByLine = new Map<Line, SVGGElement>();
   private lineBySvgG = new Map<SVGGElement, Line>();
   private onMouseDown: (event: MouseEvent) => any;
@@ -37,12 +44,13 @@ export class SvgRenderer implements PolplotRenderer {
   private onMouseMove: (event: MouseEvent) => any;
   constructor() {
     this.svg.appendChild(this.intersectionContainer);
+    this.svg.appendChild(this.polygonContainer);
   }
   clickHandlerWrapper(clickHandler: ClickHandler): (event: MouseEvent) => any {
     return event => {
       const elementAt = document.elementFromPoint(event.clientX, event.clientY);
       const line = this.lineBySvgG.get(elementAt.parentNode as SVGGElement);
-      if (elementAt instanceof SVGPathElement) {
+      if (elementAt instanceof SVGPathElement && elementAt.parentNode !== this.polygonContainer) {
         if (elementAt.parentNode.children[1] === elementAt) {
           clickHandler(event, line, line.v1);
         } else {
@@ -126,5 +134,14 @@ export class SvgRenderer implements PolplotRenderer {
   }
   clearIntersections(): void {
     this.intersectionContainer.childNodes.forEach(childNode => this.intersectionContainer.removeChild(childNode));
+  }
+  drawPolygon(polygon: Polygon): void {
+    const svgPath = polygonTemplate.cloneNode() as SVGPathElement;
+    svgPath.setAttribute('d', 'M' + polygon.vertices.map(v => `${v.x} ${v.y}`).join(' L ') + 'Z');
+    svgPath.setAttribute('fill', '#' + (Math.floor(16777215 * Math.random())).toString(16));
+    this.polygonContainer.appendChild(svgPath);
+  }
+  clearPolygons(): void {
+    this.polygonContainer.childNodes.forEach(childNode => this.polygonContainer.removeChild(childNode));
   }
 }

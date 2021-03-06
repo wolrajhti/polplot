@@ -1,5 +1,6 @@
 import { PolplotRenderer } from "./interfaces/polplot-renderer";
 import { Line } from "./line";
+import { Polygon } from "./polygon";
 import { Vector2 } from "./vector2";
 
 export class PolPlot {
@@ -115,5 +116,90 @@ export class PolPlot {
         }
       });
     });
+    this.renderer.clearPolygons();
+    this.buildPolygonsFromIntersectionTimes()
+      .forEach(polygon => this.renderer.drawPolygon(polygon));
+  }
+  testSide(u: Vector2, v: Vector2, w: Vector2): boolean {
+    return v.sub(u).cross(w.sub(u)) > 0;
+  }
+  buildPolygonsFromIntersectionTimes(): Polygon[] {
+    const intersectionTimesSortedIndexArray = this.intersectionTimes
+      .map(intersectionTimes => {
+        return intersectionTimes
+          .map((_, i) => i)
+          .filter(i => !isNaN(intersectionTimes[i]) && 0 <= intersectionTimes[i] && intersectionTimes[i] <= 1)
+          .sort((i, j) => intersectionTimes[i] - intersectionTimes[j]);
+      });
+    const polygons: Polygon[] = [];
+    for (let i = 0; i < intersectionTimesSortedIndexArray.length; i++) {
+      for (let j = 0; j < intersectionTimesSortedIndexArray[i].length - 1; j++) {
+        let pk: number;
+        let pl: number;
+        let k = i;
+        let l = j;
+        const polygon: Vector2[] = [
+          // first point on original line
+          this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l]]),
+          // second point on original line (the next intersection)
+          this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l + 1]]),
+        ];
+        // skip if current edge is already on an other polygon
+        if (polygons.some(p => p.shareEdge(polygon[0], polygon[1]))) {
+          break;
+        }
+        l += 1;
+        let I = 0;
+        let closed = false;
+        while (true && I++ < 1e3) {
+          pk = k;
+          pl = l;
+          // switch to the line intersected at previous point
+          k = intersectionTimesSortedIndexArray[k][l];
+          if (typeof k !== 'number') {
+            break;
+          }
+          // retrieve the index of previous intersection on new line
+          l = intersectionTimesSortedIndexArray[k].findIndex(m => m === pk);
+          if (typeof l !== 'number') {
+            console.log('error');
+          }
+          // optionnally
+          if (
+            0 < l && this.testSide(
+              polygon[polygon.length - 2],
+              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l - 1]]),
+              polygon[polygon.length - 1],
+            )
+          ) {
+            l -= 1;
+          } else if (
+            l < intersectionTimesSortedIndexArray[k].length - 1 && this.testSide(
+              polygon[polygon.length - 2],
+              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l + 1]]),
+              polygon[polygon.length - 1],
+            )
+          ) {
+            l += 1;
+          } else {
+            break;
+          }
+          polygon.push(this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l]]));
+          // if last pushed point is equals to the first, closed the polygon
+          if (polygon[0].equals(polygon[polygon.length - 1])) {
+            polygon.pop();
+            closed = true;
+            break;
+          }
+        }
+        if (i === 1e3) {
+          console.warn('too many loops');
+        }
+        if (closed) {
+          polygons.push(new Polygon(polygon));
+        }
+      }
+    }
+    return polygons;
   }
 }

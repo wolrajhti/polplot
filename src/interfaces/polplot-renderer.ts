@@ -1,4 +1,5 @@
 import { Line } from "../line";
+import { Polygon } from "../polygon";
 import { Vector2 } from "../vector2";
 
 export type ClickHandler = (event: MouseEvent, clickedLine?: Line, clickedVector2?: Vector2) => void;
@@ -11,4 +12,6 @@ export interface PolplotRenderer {
   setMouseMoveHandler(clickHandler: ClickHandler): void;
   drawPoint(point: Vector2): void;
   clearIntersections(): void;
+  drawPolygon(polygon: Polygon): void;
+  clearPolygons(): void;
 }

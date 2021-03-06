@@ -27,6 +27,9 @@ export class Line {
   len(): number {
     return this.v2.sub(this.v1).len();
   }
+  pointAt(t: number): Vector2 {
+    return this.v1.add(this.v2.sub(this.v1).mul(t));
+  }
   before(t: number): Vector2 {
     return this.v1.add(this.v2.sub(this.v1).mul(-t / this.len()));
   }
