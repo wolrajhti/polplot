@@ -124,6 +124,8 @@ export class PolPlot {
     return v.sub(u).cross(w.sub(u)) > 0;
   }
   buildPolygonsFromIntersectionTimes(): Polygon[] {
+    // console.log('buildPolygonsFromIntersectionTimes');
+    // console.log('----------------------------------');
     const intersectionTimesSortedIndexArray = this.intersectionTimes
       .map((intersectionTimes, i) => {
         return intersectionTimes
@@ -137,6 +139,11 @@ export class PolPlot {
     const polygons: Polygon[] = [];
     for (let i = 0; i < intersectionTimesSortedIndexArray.length; i++) {
       for (let j = 0; j < intersectionTimesSortedIndexArray[i].length - 1; j++) {
+        // console.log(
+        //   'looking for polygon on line', i,
+        //   'from intersection with', intersectionTimesSortedIndexArray[i][j],
+        //   'to intersection with', intersectionTimesSortedIndexArray[i][j + 1]
+        // );
         let pk: number;
         let pl: number;
         let k = i;
@@ -154,37 +161,40 @@ export class PolPlot {
         l += 1;
         let I = 0;
         let closed = false;
-        while (true && I++ < 1e3) {
+        while (true && I++ < 1e2) {
           pk = k;
           pl = l;
           // switch to the line intersected at previous point
           k = intersectionTimesSortedIndexArray[k][l];
           if (typeof k !== 'number') {
+            // console.log('k is not a number');
             break;
           }
           // retrieve the index of previous intersection on new line
           l = intersectionTimesSortedIndexArray[k].findIndex(m => m === pk);
           if (typeof l !== 'number') {
-            console.log('error');
+            console.warn('error');
           }
+          // console.log('moving to line', k, 'at intersection with', intersectionTimesSortedIndexArray[k][l]);
           // optionnally
           if (
             0 < l && this.testSide(
               polygon[polygon.length - 2],
-              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l - 1]]),
               polygon[polygon.length - 1],
+              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l - 1]]),
             )
           ) {
             l -= 1;
           } else if (
             l < intersectionTimesSortedIndexArray[k].length - 1 && this.testSide(
               polygon[polygon.length - 2],
-              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l + 1]]),
               polygon[polygon.length - 1],
+              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l + 1]]),
             )
           ) {
             l += 1;
           } else {
+            // console.log('no prev or next on line', k);
             break;
           }
           polygon.push(this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l]]));
@@ -195,7 +205,7 @@ export class PolPlot {
             break;
           }
         }
-        if (i === 1e3) {
+        if (I === 1e2) {
           console.warn('too many loops');
         }
         if (closed) {
