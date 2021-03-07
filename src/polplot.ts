@@ -125,10 +125,13 @@ export class PolPlot {
   }
   buildPolygonsFromIntersectionTimes(): Polygon[] {
     const intersectionTimesSortedIndexArray = this.intersectionTimes
-      .map(intersectionTimes => {
+      .map((intersectionTimes, i) => {
         return intersectionTimes
-          .map((_, i) => i)
-          .filter(i => !isNaN(intersectionTimes[i]) && 0 <= intersectionTimes[i] && intersectionTimes[i] <= 1)
+          .map((_, j) => j)
+          .filter(j => {
+            return !isNaN(intersectionTimes[j]) && 0 <= intersectionTimes[j] && intersectionTimes[j] <= 1 &&
+              !isNaN(this.intersectionTimes[j][i]) && 0 <= this.intersectionTimes[j][i] && this.intersectionTimes[j][i] <= 1;
+          })
           .sort((i, j) => intersectionTimes[i] - intersectionTimes[j]);
       });
     const polygons: Polygon[] = [];
