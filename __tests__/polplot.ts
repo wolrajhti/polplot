@@ -28,7 +28,7 @@ describe('PolPlot', () => {
           new Vector2(-1, 0),
           new Vector2(0, 1),
           new Vector2(1, 0),
-          new Vector2(0, -1)
+          new Vector2(0, -1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -38,6 +38,28 @@ describe('PolPlot', () => {
       expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
       expect(parts[2].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
       expect(parts[3].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+    });
+    test('case 01: PL, NF, NL, PF (F reversed)', () => {
+      //          PF
+      //       PL L  NL
+      //          NF
+      const parts = polplot.buildPartialsFromPoints(
+        new Vector2(0, 0),
+        [
+          new Vector2(-1, 0),
+          new Vector2(0, -1),
+          new Vector2(1, 0),
+          new Vector2(0, 1),
+        ],
+        new Line(-1, 0, 1, 0),
+        new Line(0, 1, 0, -1),
+      );
+      expect(parts.length).toBe(4);
+      parts.forEach(p => console.log(p.toString()));
+      // expect(parts[0].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
+      // expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
+      // expect(parts[2].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
+      // expect(parts[3].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
     });
     test('case 02: .., NF, NF, PF', () => {
       //          NF
@@ -49,7 +71,7 @@ describe('PolPlot', () => {
           null,
           new Vector2(0, 1),
           new Vector2(1, 0),
-          new Vector2(0, -1)
+          new Vector2(0, -1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -68,7 +90,7 @@ describe('PolPlot', () => {
           null,
           null,
           new Vector2(1, 0),
-          new Vector2(0, -1)
+          new Vector2(0, -1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -87,7 +109,7 @@ describe('PolPlot', () => {
           null,
           new Vector2(0, 1),
           null,
-          new Vector2(0, -1)
+          new Vector2(0, -1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -105,7 +127,7 @@ describe('PolPlot', () => {
           null,
           new Vector2(0, 1),
           new Vector2(1, 0),
-          null
+          null,
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -123,7 +145,7 @@ describe('PolPlot', () => {
           new Vector2(-1, 0),
           null,
           new Vector2(1, 0),
-          new Vector2(0, -1)
+          new Vector2(0, -1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -142,7 +164,7 @@ describe('PolPlot', () => {
           new Vector2(-1, 0),
           null,
           null,
-          new Vector2(0, -1)
+          new Vector2(0, -1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -159,7 +181,7 @@ describe('PolPlot', () => {
           new Vector2(-1, 0),
           null,
           new Vector2(1, 0),
-          null
+          null,
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -178,7 +200,7 @@ describe('PolPlot', () => {
           new Vector2(-1, 0),
           new Vector2(0, 1),
           null,
-          new Vector2(0, -1)
+          new Vector2(0, -1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -197,7 +219,7 @@ describe('PolPlot', () => {
           new Vector2(-1, 0),
           new Vector2(0, 1),
           null,
-          null
+          null,
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -215,7 +237,7 @@ describe('PolPlot', () => {
           new Vector2(-1, 0),
           new Vector2(0, 1),
           new Vector2(1, 0),
-          null
+          null,
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
