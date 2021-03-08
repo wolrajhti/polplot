@@ -30,4 +30,10 @@ export class Polygon {
   intersectionWith(line: Line) {
     
   }
+  reverse(): void {
+    this.vertices.reverse();
+  }
+  toString(): string {
+    return `${this.vertices.length} points: ` + this.vertices.map(v => `(${v.x.toFixed()}, ${v.y.toFixed()})`).join(', ');
+  }
 }

@@ -59,6 +59,11 @@ export class PolPlot {
         this.renderer.drawLine(draggedLine, draggedLine === hoveredLine, draggedLine === selectedLine);
       }
     });
+    document.addEventListener('keyup', event => {
+      if (event.key === ' ') {
+        this.renderIntersections();
+      }
+    });
   }
   addLine(line: Line): void {
     this.addIntersectionTimes(line);
@@ -123,9 +128,14 @@ export class PolPlot {
   testSide(u: Vector2, v: Vector2, w: Vector2): boolean {
     return v.sub(u).cross(w.sub(u)) > 0;
   }
+  partialsAreConnected(p1: Polygon, p2: Polygon): boolean {
+    return p1.vertices[p1.vertices.length - 2].equals(p2.vertices[0]) &&
+           p1.vertices[p1.vertices.length - 1].equals(p2.vertices[1]);
+  }
   buildPolygonsFromIntersectionTimes(): Polygon[] {
     // console.log('buildPolygonsFromIntersectionTimes');
     // console.log('----------------------------------');
+    // console.log('lines.length = ', this.lines.length);
     const intersectionTimesSortedIndexArray = this.intersectionTimes
       .map((intersectionTimes, i) => {
         return intersectionTimes
@@ -136,83 +146,115 @@ export class PolPlot {
           })
           .sort((i, j) => intersectionTimes[i] - intersectionTimes[j]);
       });
-    const polygons: Polygon[] = [];
-    for (let i = 0; i < intersectionTimesSortedIndexArray.length; i++) {
-      for (let j = 0; j < intersectionTimesSortedIndexArray[i].length - 1; j++) {
-        // console.log(
-        //   'looking for polygon on line', i,
-        //   'from intersection with', intersectionTimesSortedIndexArray[i][j],
-        //   'to intersection with', intersectionTimesSortedIndexArray[i][j + 1]
-        // );
-        let pk: number;
-        let pl: number;
-        let k = i;
-        let l = j;
-        const polygon: Vector2[] = [
-          // first point on original line
-          this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l]]),
-          // second point on original line (the next intersection)
-          this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l + 1]]),
-        ];
-        // skip if current edge is already on an other polygon
-        if (polygons.some(p => p.shareEdge(polygon[0], polygon[1]))) {
-          break;
-        }
-        l += 1;
-        let I = 0;
-        let closed = false;
-        while (true && I++ < 1e2) {
-          pk = k;
-          pl = l;
-          // switch to the line intersected at previous point
-          k = intersectionTimesSortedIndexArray[k][l];
-          if (typeof k !== 'number') {
-            // console.log('k is not a number');
-            break;
+    const partials: Polygon[] = [];
+    for (let localIndex = 0; localIndex < intersectionTimesSortedIndexArray.length; localIndex++) {
+      for (let localInterIndex = 0; localInterIndex < intersectionTimesSortedIndexArray[localIndex].length; localInterIndex++) {
+        const foreignIndex = intersectionTimesSortedIndexArray[localIndex][localInterIndex];
+        if (localIndex < foreignIndex) {
+          const localInter = this.lines[localIndex].pointAt(this.intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]]);
+          const prevLocalInterIndex = localInterIndex - 1;
+          const nextLocalInterIndex = localInterIndex + 1;
+          const foreignInterIndex = intersectionTimesSortedIndexArray[foreignIndex].findIndex(i => i === localIndex);
+          const prevForeignInterIndex = foreignInterIndex - 1;
+          const nextForeignInterIndex = foreignInterIndex + 1;
+          // console.log(`
+          //   localIndex: ${localIndex}
+          //   localIntersections ${intersectionTimesSortedIndexArray[localIndex]
+          //     .map((_, i) => i === localInterIndex ? `[${_}]` : _)
+          //     .join(', ')}
+          //   foreignIndex: ${foreignIndex}
+          //   foreignIntersections ${intersectionTimesSortedIndexArray[foreignIndex]
+          //     .map((_, i) => i === foreignInterIndex ? `[${_}]` : _)
+          //     .join(', ')}
+          // `);
+          const prevLocalInter = 0 < localInterIndex
+            ? this.lines[localIndex].pointAt(this.intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][prevLocalInterIndex]])
+            : null;
+          const nextLocalInter = localInterIndex < intersectionTimesSortedIndexArray[localIndex].length - 1
+            ? this.lines[localIndex].pointAt(this.intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][nextLocalInterIndex]])
+            : null;
+          const prevForeignInter = 0 < foreignInterIndex
+            ? this.lines[foreignIndex].pointAt(this.intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][prevForeignInterIndex]])
+            : null;
+          const nextForeignInter = foreignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length - 1
+            ? this.lines[foreignIndex].pointAt(this.intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][nextForeignInterIndex]])
+            : null;
+          //                          ^
+          //                          |
+          //                  nextForeignInter
+          //                          |
+          //  ---prevLocalInter---localInter---nextLocalInter--->
+          //                          |
+          //                  prevForeignInter
+          //                          |
+          const points = [prevLocalInter, nextForeignInter, nextLocalInter, prevForeignInter];
+          for (let i = 0; i < points.length; i++) {
+            if (points[i]) {
+              let j = i + 1;
+              if (j === points.length) {
+                j = 0;
+              }
+              while (!points[j]) {
+                j++;
+                if (j === points.length) {
+                  j = 0;
+                }
+              }
+              if (i !== j) {
+                if (points.filter(p => !!p).length === 4) {
+                  console.log('push');
+                }
+                partials.push(new Polygon([points[i], localInter, points[j]]));
+              }
+            }
           }
-          // retrieve the index of previous intersection on new line
-          l = intersectionTimesSortedIndexArray[k].findIndex(m => m === pk);
-          if (typeof l !== 'number') {
-            console.warn('error');
-          }
-          // console.log('moving to line', k, 'at intersection with', intersectionTimesSortedIndexArray[k][l]);
-          // optionnally
-          if (
-            0 < l && this.testSide(
-              polygon[polygon.length - 2],
-              polygon[polygon.length - 1],
-              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l - 1]]),
-            )
-          ) {
-            l -= 1;
-          } else if (
-            l < intersectionTimesSortedIndexArray[k].length - 1 && this.testSide(
-              polygon[polygon.length - 2],
-              polygon[polygon.length - 1],
-              this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l + 1]]),
-            )
-          ) {
-            l += 1;
-          } else {
-            // console.log('no prev or next on line', k);
-            break;
-          }
-          polygon.push(this.lines[k].pointAt(this.intersectionTimes[k][intersectionTimesSortedIndexArray[k][l]]));
-          // if last pushed point is equals to the first, closed the polygon
-          if (polygon[0].equals(polygon[polygon.length - 1])) {
-            polygon.pop();
-            closed = true;
-            break;
-          }
-        }
-        if (I === 1e2) {
-          console.warn('too many loops');
-        }
-        if (closed) {
-          polygons.push(new Polygon(polygon));
         }
       }
     }
-    return polygons;
+    partials.forEach(p => {
+      if (p.area() < 0) {
+        p.reverse();
+      }
+    });
+    console.log('partials', partials);
+    const polygons: Polygon[] = [];
+    let i = 0;
+    while (i < partials.length) {
+      for (let j = 0; j < partials.length; j++) {
+        if (i !== j) {
+          if (this.partialsAreConnected(partials[i], partials[j])) {
+            // console.log(`
+            //   partials[i]: ${partials[i].toString()},
+            //   partials[j]: ${partials[j].toString()},
+            // `);
+            partials[i].vertices.splice(-2, 2, ...partials[j].vertices);
+            // console.log(`
+            //   partials[i]: ${partials[i].toString()} [NEW],
+            // `);
+            partials.splice(j, 1);
+            // if (i < j) {
+            //   i--;
+            // }
+            // if (this.partialsAreConnected(partials[i], partials[i])) {
+            //   partials[i].vertices.pop();
+            //   partials[i].vertices.pop();
+            //   polygons.push(partials[i]);
+            //   partials.splice(i, 1);
+            // } else if (partials[i].vertices[0].equals(partials[i].vertices[partials[i].vertices.length - 1])) {
+            //   partials[i].vertices.pop();
+            //   polygons.push(partials[i]);
+            //   partials.splice(i, 1);
+            // }
+            i = -1;
+            break;
+          }
+        }
+      }
+      i++;
+    }
+    console.log('incomplete polygons');
+    partials.map(p => console.log(p.toString()));
+    console.log('polygons', polygons);
+    return partials;
   }
 }

@@ -30,6 +30,7 @@ pointTemplate.setAttribute('r', '3');
 
 const polygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 polygonTemplate.setAttribute('fill', 'green');
+polygonTemplate.setAttribute('fill-opacity', '0.7');
 polygonTemplate.setAttribute('stroke-width', '3');
 polygonTemplate.setAttribute('stroke', 'grey');
 
@@ -132,8 +133,13 @@ export class SvgRenderer implements PolplotRenderer {
     svgCircle.setAttribute('cy', point.y.toFixed());
     this.intersectionContainer.appendChild(svgCircle);
   }
+  private clearContainer(container: SVGGElement): void {
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+  }
   clearIntersections(): void {
-    this.intersectionContainer.childNodes.forEach(childNode => this.intersectionContainer.removeChild(childNode));
+    this.clearContainer(this.intersectionContainer);
   }
   drawPolygon(polygon: Polygon): void {
     const svgPath = polygonTemplate.cloneNode() as SVGPathElement;
@@ -142,6 +148,6 @@ export class SvgRenderer implements PolplotRenderer {
     this.polygonContainer.appendChild(svgPath);
   }
   clearPolygons(): void {
-    this.polygonContainer.childNodes.forEach(childNode => this.polygonContainer.removeChild(childNode));
+    this.clearContainer(this.polygonContainer);
   }
 }
