@@ -3,12 +3,11 @@ import { Line } from "./line";
 import { Polygon } from "./polygon";
 import { Vector2 } from "./vector2";
 
-export class PolPlot {
+export class Polplot {
   lines: Line[] = [];
   intersectionTimes: number[][] = [];
   intersectionPoints: Vector2[][] = [];
   constructor(readonly renderer: PolplotRenderer) {
-    this.test();
     let draggedLine: Line;
     let draggedVector2: Vector2;
 
@@ -60,11 +59,6 @@ export class PolPlot {
         this.renderer.drawLine(draggedLine, draggedLine === hoveredLine, draggedLine === selectedLine);
       }
     });
-    document.addEventListener('keyup', event => {
-      if (event.key === ' ') {
-        this.renderIntersections();
-      }
-    });
   }
   addLine(line: Line): void {
     this.addIntersectionTimes(line);
@@ -95,7 +89,7 @@ export class PolPlot {
     newIntersectionPoints.push(null);
     intersectionTimes.push(newIntersectionTimes);
     intersectionPoints.push(newIntersectionPoints);
-    // this.renderIntersections();
+    this.renderIntersections();
   }
   updateIntersectionTimes(
     line: Line,
@@ -121,7 +115,7 @@ export class PolPlot {
         }
       }
     }
-    // this.renderIntersections();
+    this.renderIntersections();
   }
   renderIntersections(): void {
     this.renderer.clearIntersections();
@@ -145,11 +139,12 @@ export class PolPlot {
            p1.vertices[p1.vertices.length - 1].equals(p2.vertices[1]);
   }
   buildPartialsFromPoints(
-    localInter: Vector2,
+    intersection: Vector2,
     points: [Vector2, Vector2, Vector2, Vector2],
     localLine: Line,
+    foreignLine: Line,
   ): Polygon[] {
-    const parts: Polygon[] = [];
+    const parts: [number, number][] = [];
     for (let i = 0; i < points.length; i++) {
       if (points[i]) {
         let j = i + 1;
@@ -163,35 +158,21 @@ export class PolPlot {
           }
         }
         if (i !== j) {
-          parts.push(new Polygon([points[i], localInter, points[j]]));
+          parts.push([i, j]);
         }
       }
     }
-    if (parts.length === 2 && parts[0].area() === 0) {
-      // special case where we only have prevLocalInter (optionally) and nextLocalInter
-      // TODO check this special case when every thing works
-      // console.log(parts);
-      if (localLine.v1.y < localLine.v2.y) {
-        parts.forEach(p => p.reverse());
-      }
-    } else {
-      parts.forEach(p => {
-        if (p.area() < 0) {
-          p.reverse();
+    return parts.map(([i, j]) => {
+      const polygon = new Polygon([points[i], intersection, points[j]]);
+      if (i % 2 === 0 || j % 2 === 0) {
+        if (localLine.v2.y < localLine.v1.y || localLine.v2.x >= localLine.v1.x) {
+          polygon.reverse();
         }
-      });
-    }
-    // if (parts.some(p => p.area() < 0)) {
-    //   parts.forEach(p => p.reverse());
-    // } else if (!parts.some(p => 0 < p.area())) {
-    //   // special case where we only have prevLocalInter (optionally) and nextLocalInter
-    //   // TODO check this special case when every thing works
-    //   // console.log(parts);
-    //   if (localLine.v1.y < localLine.v2.y) {
-    //     parts.forEach(p => p.reverse());
-    //   }
-    // }
-    return parts;
+      } else if (foreignLine.v2.y < foreignLine.v1.y || foreignLine.v2.x >= foreignLine.v1.x) {
+        polygon.reverse();
+      }
+      return polygon;
+    });
   }
   buildPartialsFromIntersectionTimes(
     lines = this.lines,
@@ -216,7 +197,7 @@ export class PolPlot {
       for (let localInterIndex = 0; localInterIndex < intersectionTimesSortedIndexArray[localIndex].length; localInterIndex++) {
         const foreignIndex = intersectionTimesSortedIndexArray[localIndex][localInterIndex];
         if (localIndex < foreignIndex) {
-          const localInter = lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]]);
+          const inter = lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]]);
           const prevLocalInterIndex = localInterIndex - 1;
           const nextLocalInterIndex = localInterIndex + 1;
           const foreignInterIndex = intersectionTimesSortedIndexArray[foreignIndex].findIndex(i => i === localIndex);
@@ -244,23 +225,24 @@ export class PolPlot {
           const nextForeignInter = foreignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length - 1
             ? lines[foreignIndex].pointAt(intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][nextForeignInterIndex]])
             : null;
-          //                          ^
-          //                          |
-          //                  nextForeignInter
-          //                          |
-          //  ---prevLocalInter---localInter---nextLocalInter--->
-          //                          |
-          //                  prevForeignInter
-          //                          |
+          //                        ^
+          //                        |
+          //                nextForeignInter
+          //                        |
+          //  ---prevLocalInter---inter---nextLocalInter--->
+          //                        |
+          //                prevForeignInter
+          //                        |
           const parts = this.buildPartialsFromPoints(
-            localInter,
+            inter,
             [
               prevLocalInter,
               nextForeignInter,
               nextLocalInter,
               prevForeignInter
             ],
-            lines[localIndex]
+            lines[localIndex],
+            lines[foreignIndex]
           );
           partials.push(...parts);
         }
@@ -316,86 +298,21 @@ export class PolPlot {
     polygons.map(p => console.log(p.toString()));
     return polygons;
   }
-  test(): void {
-    // localLine increase and foreign dicrease
-    let localLine = new Line(300, 300, 600, 600);
-    let foreignLine = new Line(300, 600, 600, 300);
-    let localInter = new Vector2(450, 450);
-    let prevLocalInter = new Vector2(400, 400);
-    let nextLocalInter = new Vector2(500, 500);
-    let prevForeignInter = new Vector2(400, 500);
-    let nextForeignInter = new Vector2(500, 400);
-    let parts = this.buildPartialsFromPoints(
-      localInter,
-      [
-        prevLocalInter,
-        nextForeignInter,
-        nextLocalInter,
-        prevForeignInter
-      ],
-      localLine
-    );
-    parts.map(p => console.log(p.toString()));
-    // parts.length === 4
-
-    // localLine increase and foreign increase
-    localLine = new Line(300, 300, 600, 600);
-    foreignLine = new Line(600, 300, 300, 600);
-    localInter = new Vector2(450, 450);
-    prevLocalInter = new Vector2(400, 400);
-    nextLocalInter = new Vector2(500, 500);
-    prevForeignInter = new Vector2(500, 400);
-    nextForeignInter = new Vector2(400, 500);
-    parts = this.buildPartialsFromPoints(
-      localInter,
-      [
-        prevLocalInter,
-        nextForeignInter,
-        nextLocalInter,
-        prevForeignInter
-      ],
-      localLine
-    );
-    parts.map(p => console.log(p.toString()));
-    // parts.length === 4
-
-    // localLine increase and foreign increase
-    localLine = new Line(300, 300, 600, 600);
-    foreignLine = new Line(600, 300, 300, 600);
-    localInter = new Vector2(450, 450);
-    prevLocalInter = new Vector2(400, 400);
-    nextLocalInter = null;
-    prevForeignInter = null;
-    nextForeignInter = new Vector2(400, 500);
-    parts = this.buildPartialsFromPoints(
-      localInter,
-      [
-        prevLocalInter,
-        nextForeignInter,
-        nextLocalInter,
-        prevForeignInter
-      ],
-      localLine
-    );
-    parts.map(p => console.log(p.toString()));
-    // parts.length === 3
-  }
 }
 
-
 // const lines: Line[] = [];
-    // const iTimes: number[][] = [];
-    // const iPoints: Vector2[][] = [];
-    // [
-    //   [300, 300, 600, 600],
-    //   [300, 600, 600, 300],
-    //   [400, 300, 300, 400],
-    //   [500, 600, 600, 400],
-    //   [300, 500, 400, 600],
-    //   [500, 600, 600, 400],
-    // ].forEach(([x1, y1, x2, y2]) => {
-    //   this.addIntersectionTimes(l1, lines, iTimes, iPoints);
-    //   lines.push(l1);
-    // });
-    // const partials = this.buildPartialsFromIntersectionTimes(lines, iTimes);
-    // console.log(partials);
+// const iTimes: number[][] = [];
+// const iPoints: Vector2[][] = [];
+// [
+//   [300, 300, 600, 600],
+//   [300, 600, 600, 300],
+//   [400, 300, 300, 400],
+//   [500, 600, 600, 400],
+//   [300, 500, 400, 600],
+//   [500, 600, 600, 400],
+// ].forEach(([x1, y1, x2, y2]) => {
+//   this.addIntersectionTimes(l1, lines, iTimes, iPoints);
+//   lines.push(l1);
+// });
+// const partials = this.buildPartialsFromIntersectionTimes(lines, iTimes);
+// console.log(partials);
