@@ -143,8 +143,8 @@ export class SvgRenderer implements PolplotRenderer {
   }
   drawPolygon(polygon: Polygon): void {
     const svgPath = polygonTemplate.cloneNode() as SVGPathElement;
-    svgPath.setAttribute('d', 'M' + polygon.vertices.map(v => `${v.x} ${v.y}`).join(' L ') + 'Z');
-    svgPath.setAttribute('fill', '#' + (Math.floor(16777215 * Math.random())).toString(16));
+    svgPath.setAttribute('d', 'M ' + polygon.vertices.map(v => `${v.x.toFixed()} ${v.y.toFixed()}`).join(' L ') + 'Z');
+    svgPath.setAttribute('fill', '#' + (Math.floor((16777215 - 1e5) * Math.random()) + 1e5).toString(16));
     this.polygonContainer.appendChild(svgPath);
   }
   clearPolygons(): void {

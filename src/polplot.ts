@@ -8,6 +8,7 @@ export class PolPlot {
   intersectionTimes: number[][] = [];
   intersectionPoints: Vector2[][] = [];
   constructor(readonly renderer: PolplotRenderer) {
+    this.test();
     let draggedLine: Line;
     let draggedVector2: Vector2;
 
@@ -70,47 +71,57 @@ export class PolPlot {
     this.lines.push(line);
     this.renderer.drawLine(line, false, false);
   }
-  addIntersectionTimes(line: Line): void {
-    const intersectionTimes: number[] = [];
-    const intersectionPoints: Vector2[] = [];
+  addIntersectionTimes(
+    line: Line,
+    lines = this.lines,
+    intersectionTimes = this.intersectionTimes,
+    intersectionPoints = this.intersectionPoints
+  ): void {
+    const newIntersectionTimes: number[] = [];
+    const newIntersectionPoints: Vector2[] = [];
     let times: Vector2;
-    for (let i = 0; i < this.lines.length; i++) {
-      times = this.lines[i].intersectionTimesWith(line);
-      this.intersectionTimes[i].push(times.x);
-      this.intersectionPoints[i].push(
+    for (let i = 0; i < lines.length; i++) {
+      times = lines[i].intersectionTimesWith(line);
+      intersectionTimes[i].push(times.x);
+      intersectionPoints[i].push(
         0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
-          ? this.lines[i].v1.add(this.lines[i].v2.sub(this.lines[i].v1).mul(times.x))
+          ? lines[i].v1.add(lines[i].v2.sub(lines[i].v1).mul(times.x))
           : null
       );
-      intersectionTimes.push(times.y);
-      intersectionPoints.push(null);
+      newIntersectionTimes.push(times.y);
+      newIntersectionPoints.push(null);
     }
-    intersectionTimes.push(NaN);
-    intersectionPoints.push(null);
-    this.intersectionTimes.push(intersectionTimes);
-    this.intersectionPoints.push(intersectionPoints);
-    this.renderIntersections();
+    newIntersectionTimes.push(NaN);
+    newIntersectionPoints.push(null);
+    intersectionTimes.push(newIntersectionTimes);
+    intersectionPoints.push(newIntersectionPoints);
+    // this.renderIntersections();
   }
-  updateIntersectionTimes(line: Line): void {
-    const index = this.lines.indexOf(line);
+  updateIntersectionTimes(
+    line: Line,
+    lines = this.lines,
+    intersectionTimes = this.intersectionTimes,
+    intersectionPoints = this.intersectionPoints
+  ): void {
+    const index = lines.indexOf(line);
     let times: Vector2;
-    for (let i = 0; i < this.lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
       if (i !== index) {
-        times = this.lines[i].intersectionTimesWith(line);
-        this.intersectionTimes[i][index] = times.x;
-        this.intersectionTimes[index][i] = times.y;
+        times = lines[i].intersectionTimesWith(line);
+        intersectionTimes[i][index] = times.x;
+        intersectionTimes[index][i] = times.y;
         if (i < index) {
-          this.intersectionPoints[i][index] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
-            ? this.lines[i].v1.add(this.lines[i].v2.sub(this.lines[i].v1).mul(times.x))
+          intersectionPoints[i][index] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
+            ? lines[i].v1.add(lines[i].v2.sub(lines[i].v1).mul(times.x))
             : null;
         } else {
-          this.intersectionPoints[index][i] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
-            ? this.lines[i].v1.add(this.lines[i].v2.sub(this.lines[i].v1).mul(times.x))
+          intersectionPoints[index][i] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
+            ? lines[i].v1.add(lines[i].v2.sub(lines[i].v1).mul(times.x))
             : null;
         }
       }
     }
-    this.renderIntersections();
+    // this.renderIntersections();
   }
   renderIntersections(): void {
     this.renderer.clearIntersections();
@@ -122,7 +133,8 @@ export class PolPlot {
       });
     });
     this.renderer.clearPolygons();
-    this.buildPolygonsFromIntersectionTimes()
+    const partials = this.buildPartialsFromIntersectionTimes();
+    this.buildPolygonsFromPartials(partials)
       .forEach(polygon => this.renderer.drawPolygon(polygon));
   }
   testSide(u: Vector2, v: Vector2, w: Vector2): boolean {
@@ -132,26 +144,79 @@ export class PolPlot {
     return p1.vertices[p1.vertices.length - 2].equals(p2.vertices[0]) &&
            p1.vertices[p1.vertices.length - 1].equals(p2.vertices[1]);
   }
-  buildPolygonsFromIntersectionTimes(): Polygon[] {
-    // console.log('buildPolygonsFromIntersectionTimes');
-    // console.log('----------------------------------');
-    // console.log('lines.length = ', this.lines.length);
-    const intersectionTimesSortedIndexArray = this.intersectionTimes
-      .map((intersectionTimes, i) => {
-        return intersectionTimes
+  buildPartialsFromPoints(
+    localInter: Vector2,
+    points: [Vector2, Vector2, Vector2, Vector2],
+    localLine: Line,
+  ): Polygon[] {
+    const parts: Polygon[] = [];
+    for (let i = 0; i < points.length; i++) {
+      if (points[i]) {
+        let j = i + 1;
+        if (j === points.length) {
+          j = 0;
+        }
+        while (!points[j]) {
+          j++;
+          if (j === points.length) {
+            j = 0;
+          }
+        }
+        if (i !== j) {
+          parts.push(new Polygon([points[i], localInter, points[j]]));
+        }
+      }
+    }
+    if (parts.length === 2 && parts[0].area() === 0) {
+      // special case where we only have prevLocalInter (optionally) and nextLocalInter
+      // TODO check this special case when every thing works
+      // console.log(parts);
+      if (localLine.v1.y < localLine.v2.y) {
+        parts.forEach(p => p.reverse());
+      }
+    } else {
+      parts.forEach(p => {
+        if (p.area() < 0) {
+          p.reverse();
+        }
+      });
+    }
+    // if (parts.some(p => p.area() < 0)) {
+    //   parts.forEach(p => p.reverse());
+    // } else if (!parts.some(p => 0 < p.area())) {
+    //   // special case where we only have prevLocalInter (optionally) and nextLocalInter
+    //   // TODO check this special case when every thing works
+    //   // console.log(parts);
+    //   if (localLine.v1.y < localLine.v2.y) {
+    //     parts.forEach(p => p.reverse());
+    //   }
+    // }
+    return parts;
+  }
+  buildPartialsFromIntersectionTimes(
+    lines = this.lines,
+    intersectionTimes = this.intersectionTimes
+  ): Polygon[] {
+    console.log('buildPartialsFromIntersectionTimes');
+    console.log('----------------------------------');
+    console.log('lines.length = ', lines.length);
+    const intersectionTimesSortedIndexArray = intersectionTimes
+      .map((intersectionTimesAtI, i) => {
+        return intersectionTimesAtI
           .map((_, j) => j)
           .filter(j => {
-            return !isNaN(intersectionTimes[j]) && 0 <= intersectionTimes[j] && intersectionTimes[j] <= 1 &&
-              !isNaN(this.intersectionTimes[j][i]) && 0 <= this.intersectionTimes[j][i] && this.intersectionTimes[j][i] <= 1;
+            return !isNaN(intersectionTimesAtI[j]) && 0 <= intersectionTimesAtI[j] && intersectionTimesAtI[j] <= 1 &&
+              !isNaN(intersectionTimes[j][i]) && 0 <= intersectionTimes[j][i] && intersectionTimes[j][i] <= 1;
           })
-          .sort((i, j) => intersectionTimes[i] - intersectionTimes[j]);
+          .sort((i, j) => intersectionTimesAtI[i] - intersectionTimesAtI[j]);
       });
+    console.log(intersectionTimesSortedIndexArray);
     const partials: Polygon[] = [];
     for (let localIndex = 0; localIndex < intersectionTimesSortedIndexArray.length; localIndex++) {
       for (let localInterIndex = 0; localInterIndex < intersectionTimesSortedIndexArray[localIndex].length; localInterIndex++) {
         const foreignIndex = intersectionTimesSortedIndexArray[localIndex][localInterIndex];
         if (localIndex < foreignIndex) {
-          const localInter = this.lines[localIndex].pointAt(this.intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]]);
+          const localInter = lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]]);
           const prevLocalInterIndex = localInterIndex - 1;
           const nextLocalInterIndex = localInterIndex + 1;
           const foreignInterIndex = intersectionTimesSortedIndexArray[foreignIndex].findIndex(i => i === localIndex);
@@ -168,16 +233,16 @@ export class PolPlot {
           //     .join(', ')}
           // `);
           const prevLocalInter = 0 < localInterIndex
-            ? this.lines[localIndex].pointAt(this.intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][prevLocalInterIndex]])
+            ? lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][prevLocalInterIndex]])
             : null;
           const nextLocalInter = localInterIndex < intersectionTimesSortedIndexArray[localIndex].length - 1
-            ? this.lines[localIndex].pointAt(this.intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][nextLocalInterIndex]])
+            ? lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][nextLocalInterIndex]])
             : null;
           const prevForeignInter = 0 < foreignInterIndex
-            ? this.lines[foreignIndex].pointAt(this.intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][prevForeignInterIndex]])
+            ? lines[foreignIndex].pointAt(intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][prevForeignInterIndex]])
             : null;
           const nextForeignInter = foreignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length - 1
-            ? this.lines[foreignIndex].pointAt(this.intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][nextForeignInterIndex]])
+            ? lines[foreignIndex].pointAt(intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][nextForeignInterIndex]])
             : null;
           //                          ^
           //                          |
@@ -187,64 +252,57 @@ export class PolPlot {
           //                          |
           //                  prevForeignInter
           //                          |
-          const points = [prevLocalInter, nextForeignInter, nextLocalInter, prevForeignInter];
-          for (let i = 0; i < points.length; i++) {
-            if (points[i]) {
-              let j = i + 1;
-              if (j === points.length) {
-                j = 0;
-              }
-              while (!points[j]) {
-                j++;
-                if (j === points.length) {
-                  j = 0;
-                }
-              }
-              if (i !== j) {
-                if (points.filter(p => !!p).length === 4) {
-                  console.log('push');
-                }
-                partials.push(new Polygon([points[i], localInter, points[j]]));
-              }
-            }
-          }
+          const parts = this.buildPartialsFromPoints(
+            localInter,
+            [
+              prevLocalInter,
+              nextForeignInter,
+              nextLocalInter,
+              prevForeignInter
+            ],
+            lines[localIndex]
+          );
+          partials.push(...parts);
         }
       }
     }
-    partials.forEach(p => {
-      if (p.area() < 0) {
-        p.reverse();
-      }
-    });
-    console.log('partials', partials);
+    // console.log('partials', partials);
+    return partials;
+  }
+  buildPolygonsFromPartials(partials: Polygon[]): Polygon[] {
     const polygons: Polygon[] = [];
     let i = 0;
     while (i < partials.length) {
       for (let j = 0; j < partials.length; j++) {
         if (i !== j) {
           if (this.partialsAreConnected(partials[i], partials[j])) {
-            // console.log(`
-            //   partials[i]: ${partials[i].toString()},
-            //   partials[j]: ${partials[j].toString()},
-            // `);
+            console.log(`
+              partials[i]: ${partials[i].toString()},
+              partials[j]: ${partials[j].toString()},
+            `);
             partials[i].vertices.splice(-2, 2, ...partials[j].vertices);
-            // console.log(`
-            //   partials[i]: ${partials[i].toString()} [NEW],
-            // `);
+            console.log(`
+              partials[i]: ${partials[i].toString()} [NEW],
+            `);
             partials.splice(j, 1);
-            // if (i < j) {
-            //   i--;
-            // }
-            // if (this.partialsAreConnected(partials[i], partials[i])) {
-            //   partials[i].vertices.pop();
-            //   partials[i].vertices.pop();
-            //   polygons.push(partials[i]);
-            //   partials.splice(i, 1);
-            // } else if (partials[i].vertices[0].equals(partials[i].vertices[partials[i].vertices.length - 1])) {
-            //   partials[i].vertices.pop();
-            //   polygons.push(partials[i]);
-            //   partials.splice(i, 1);
-            // }
+            if (j < i) {
+              i--;
+            }
+            if (this.partialsAreConnected(partials[i], partials[i])) {
+              partials[i].vertices.splice(0, 2);
+              console.log(`
+                new connected polygon: ${partials[i].toString()}
+              `);
+              polygons.push(partials[i]);
+              partials.splice(i, 1);
+            } else if (partials[i].vertices[0].equals(partials[i].vertices[partials[i].vertices.length - 1])) {
+              partials[i].vertices.pop();
+              console.log(`
+                new closed polygon: ${partials[i].toString()}
+              `);
+              polygons.push(partials[i]);
+              partials.splice(i, 1);
+            }
             i = -1;
             break;
           }
@@ -252,9 +310,92 @@ export class PolPlot {
       }
       i++;
     }
-    console.log('incomplete polygons');
-    partials.map(p => console.log(p.toString()));
+    // console.log('incomplete polygons');
+    // partials.map(p => console.log(p.toString()));
     console.log('polygons', polygons);
-    return partials;
+    polygons.map(p => console.log(p.toString()));
+    return polygons;
+  }
+  test(): void {
+    // localLine increase and foreign dicrease
+    let localLine = new Line(300, 300, 600, 600);
+    let foreignLine = new Line(300, 600, 600, 300);
+    let localInter = new Vector2(450, 450);
+    let prevLocalInter = new Vector2(400, 400);
+    let nextLocalInter = new Vector2(500, 500);
+    let prevForeignInter = new Vector2(400, 500);
+    let nextForeignInter = new Vector2(500, 400);
+    let parts = this.buildPartialsFromPoints(
+      localInter,
+      [
+        prevLocalInter,
+        nextForeignInter,
+        nextLocalInter,
+        prevForeignInter
+      ],
+      localLine
+    );
+    parts.map(p => console.log(p.toString()));
+    // parts.length === 4
+
+    // localLine increase and foreign increase
+    localLine = new Line(300, 300, 600, 600);
+    foreignLine = new Line(600, 300, 300, 600);
+    localInter = new Vector2(450, 450);
+    prevLocalInter = new Vector2(400, 400);
+    nextLocalInter = new Vector2(500, 500);
+    prevForeignInter = new Vector2(500, 400);
+    nextForeignInter = new Vector2(400, 500);
+    parts = this.buildPartialsFromPoints(
+      localInter,
+      [
+        prevLocalInter,
+        nextForeignInter,
+        nextLocalInter,
+        prevForeignInter
+      ],
+      localLine
+    );
+    parts.map(p => console.log(p.toString()));
+    // parts.length === 4
+
+    // localLine increase and foreign increase
+    localLine = new Line(300, 300, 600, 600);
+    foreignLine = new Line(600, 300, 300, 600);
+    localInter = new Vector2(450, 450);
+    prevLocalInter = new Vector2(400, 400);
+    nextLocalInter = null;
+    prevForeignInter = null;
+    nextForeignInter = new Vector2(400, 500);
+    parts = this.buildPartialsFromPoints(
+      localInter,
+      [
+        prevLocalInter,
+        nextForeignInter,
+        nextLocalInter,
+        prevForeignInter
+      ],
+      localLine
+    );
+    parts.map(p => console.log(p.toString()));
+    // parts.length === 3
   }
 }
+
+
+// const lines: Line[] = [];
+    // const iTimes: number[][] = [];
+    // const iPoints: Vector2[][] = [];
+    // [
+    //   [300, 300, 600, 600],
+    //   [300, 600, 600, 300],
+    //   [400, 300, 300, 400],
+    //   [500, 600, 600, 400],
+    //   [300, 500, 400, 600],
+    //   [500, 600, 600, 400],
+    // ].forEach(([x1, y1, x2, y2]) => {
+    //   this.addIntersectionTimes(l1, lines, iTimes, iPoints);
+    //   lines.push(l1);
+    // });
+    // const partials = this.buildPartialsFromIntersectionTimes(lines, iTimes);
+    // console.log(partials);

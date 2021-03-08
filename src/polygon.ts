@@ -34,6 +34,6 @@ export class Polygon {
     this.vertices.reverse();
   }
   toString(): string {
-    return `${this.vertices.length} points: ` + this.vertices.map(v => `(${v.x.toFixed()}, ${v.y.toFixed()})`).join(', ');
+    return `${this.vertices.length} points: ` + this.vertices.map(v => `(${v.x.toFixed()}, ${v.y.toFixed()})`).join(', ') + ` (area: ${this.area().toFixed()})`;
   }
 }

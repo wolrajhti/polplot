@@ -1,3 +1,5 @@
+const EPSILON = 3;
+
 export class Vector2 {
   constructor(public x = 0, public y = 0) {}
   static dotRaw(x1: number, y1: number, x2: number, y2: number): number {
@@ -38,7 +40,8 @@ export class Vector2 {
     return Vector2.normalize(this, by);
   }
   static equalsRaw(x1: number, y1: number, x2: number, y2: number): boolean {
-    return x1 === x2 && y1 === y2;
+    return Math.abs(x1 - x2) < EPSILON && Math.abs(y1 - y2) < EPSILON;
+    // return x1 === x2 && y1 === y2;
   }
   static equals(u: Vector2, v: Vector2): boolean {
     return this.equalsRaw(u.x, u.y, v.x, v.y);
