@@ -18,7 +18,7 @@ class FakeRenderer implements PolplotRenderer {
 describe('PolPlot', () => {
   describe('buildPartialsFromPoints', () => {
     const polplot = new Polplot(new FakeRenderer());
-    test('case 01: PL, NF, NL, PF', () => {
+    test('case 01: PL, PF, NL, NF', () => {
       //          NF
       //       PL L  NL
       //          PF
@@ -26,42 +26,20 @@ describe('PolPlot', () => {
         new Vector2(0, 0),
         [
           new Vector2(-1, 0),
-          new Vector2(0, 1),
-          new Vector2(1, 0),
           new Vector2(0, -1),
+          new Vector2(1, 0),
+          new Vector2(0, 1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(4);
-      expect(parts[0].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
-      expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
-      expect(parts[2].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
-      expect(parts[3].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+      expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+      expect(parts[1].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
+      expect(parts[2].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
+      expect(parts[3].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
     });
-    test('case 01: PL, NF, NL, PF (F reversed)', () => {
-      //          PF
-      //       PL L  NL
-      //          NF
-      const parts = polplot.buildPartialsFromPoints(
-        new Vector2(0, 0),
-        [
-          new Vector2(-1, 0),
-          new Vector2(0, -1),
-          new Vector2(1, 0),
-          new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, 1, 0, -1),
-      );
-      expect(parts.length).toBe(4);
-      parts.forEach(p => console.log(p.toString()));
-      // expect(parts[0].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
-      // expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
-      // expect(parts[2].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
-      // expect(parts[3].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
-    });
-    test('case 02: .., NF, NF, PF', () => {
+    test('case 02: .., PF, NL, NF', () => {
       //          NF
       //          L  NL
       //          PF
@@ -69,65 +47,28 @@ describe('PolPlot', () => {
         new Vector2(0, 0),
         [
           null,
-          new Vector2(0, 1),
-          new Vector2(1, 0),
           new Vector2(0, -1),
+          new Vector2(1, 0),
+          new Vector2(0, 1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(3);
-      expect(parts[0].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
-      expect(parts[1].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
+      expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
+      expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
       expect(parts[2].toString()).toBe('3 points: (0, 1), (0, 0), (0, -1) (area: 0)');
     });
-    test('case 03: .., .., NL, PF', () => {
-      //          L  NL
-      //          PF
-      const parts = polplot.buildPartialsFromPoints(
-        new Vector2(0, 0),
-        [
-          null,
-          null,
-          new Vector2(1, 0),
-          new Vector2(0, -1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
-      );
-      expect(parts.length).toBe(2);
-      expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
-      expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, -1) (area: -1)');
-    });
-    test('case 04: .., NF, .., PF', () => {
-      //          NF
-      //          L
-      //          PF
-      const parts = polplot.buildPartialsFromPoints(
-        new Vector2(0, 0),
-        [
-          null,
-          new Vector2(0, 1),
-          null,
-          new Vector2(0, -1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
-      );
-      expect(parts.length).toBe(2);
-      expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (0, 1) (area: 0)');
-      expect(parts[1].toString()).toBe('3 points: (0, 1), (0, 0), (0, -1) (area: 0)');
-    });
-    test('case 05: .., NF, NL, ..', () => {
+    test('case 03: .., .., NL, NF', () => {
       //          NF
       //          L  NL
       const parts = polplot.buildPartialsFromPoints(
         new Vector2(0, 0),
         [
           null,
-          new Vector2(0, 1),
-          new Vector2(1, 0),
           null,
+          new Vector2(1, 0),
+          new Vector2(0, 1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
@@ -136,42 +77,79 @@ describe('PolPlot', () => {
       expect(parts[0].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
       expect(parts[1].toString()).toBe('3 points: (0, 1), (0, 0), (1, 0) (area: -1)');
     });
-    test('case 06: PL, .., NL, PF', () => {
-      //       PL L  NL
+    test('case 04: .., PF, .., NF', () => {
+      //          NF
+      //          L
       //          PF
+      const parts = polplot.buildPartialsFromPoints(
+        new Vector2(0, 0),
+        [
+          null,
+          new Vector2(0, -1),
+          null,
+          new Vector2(0, 1),
+        ],
+        new Line(-1, 0, 1, 0),
+        new Line(0, -1, 0, 1),
+      );
+      expect(parts.length).toBe(2);
+      expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (0, 1) (area: 0)');
+      expect(parts[1].toString()).toBe('3 points: (0, 1), (0, 0), (0, -1) (area: 0)');
+    });
+    test('case 05: .., PF, NL, ..', () => {
+      //          L  NL
+      //          PF
+      const parts = polplot.buildPartialsFromPoints(
+        new Vector2(0, 0),
+        [
+          null,
+          new Vector2(0, -1),
+          new Vector2(1, 0),
+          null,
+        ],
+        new Line(-1, 0, 1, 0),
+        new Line(0, -1, 0, 1),
+      );
+      expect(parts.length).toBe(2);
+      expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
+      expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, -1) (area: -1)');
+    });
+    test('case 06: PL, .., NL, NF', () => {
+      //          NF
+      //       PL L  NL
       const parts = polplot.buildPartialsFromPoints(
         new Vector2(0, 0),
         [
           new Vector2(-1, 0),
           null,
           new Vector2(1, 0),
-          new Vector2(0, -1),
+          new Vector2(0, 1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(3);
-      expect(parts[0].toString()).toBe('3 points: (1, 0), (0, 0), (-1, 0) (area: 0)');
-      expect(parts[1].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
-      expect(parts[2].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+      expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (1, 0) (area: 0)');
+      expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
+      expect(parts[2].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
     });
-    test('case 07: PL, .., .., PF', () => {
+    test('case 07: PL, .., .., NF', () => {
+      //          NF
       //       PL L
-      //          PF
       const parts = polplot.buildPartialsFromPoints(
         new Vector2(0, 0),
         [
           new Vector2(-1, 0),
           null,
           null,
-          new Vector2(0, -1),
+          new Vector2(0, 1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(2);
-      expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (-1, 0) (area: -1)');
-      expect(parts[1].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+      expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, 1) (area: -1)');
+      expect(parts[1].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
     });
     test('case 08: PL, .., NL, ..', () => {
       //       PL L  NL
@@ -187,10 +165,10 @@ describe('PolPlot', () => {
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(2);
-      expect(parts[0].toString()).toBe('3 points: (1, 0), (0, 0), (-1, 0) (area: 0)');
-      expect(parts[1].toString()).toBe('3 points: (-1, 0), (0, 0), (1, 0) (area: 0)');
+      expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (1, 0) (area: 0)');
+      expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (-1, 0) (area: 0)');
     });
-    test('case 09: PL, NF, .., PF', () => {
+    test('case 09: PL, PF, .., NF', () => {
       //          NF
       //       PL L
       //          PF
@@ -198,26 +176,26 @@ describe('PolPlot', () => {
         new Vector2(0, 0),
         [
           new Vector2(-1, 0),
-          new Vector2(0, 1),
-          null,
           new Vector2(0, -1),
+          null,
+          new Vector2(0, 1),
         ],
         new Line(-1, 0, 1, 0),
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(3);
-      expect(parts[0].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
+      expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
       expect(parts[1].toString()).toBe('3 points: (0, -1), (0, 0), (0, 1) (area: 0)');
-      expect(parts[2].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+      expect(parts[2].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
     });
-    test('case 10: PL, NF, .., ..', () => {
-      //          NF
+    test('case 10: PL, PF, .., ..', () => {
       //       PL L
+      //          PF
       const parts = polplot.buildPartialsFromPoints(
         new Vector2(0, 0),
         [
           new Vector2(-1, 0),
-          new Vector2(0, 1),
+          new Vector2(0, -1),
           null,
           null,
         ],
@@ -225,17 +203,17 @@ describe('PolPlot', () => {
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(2);
-      expect(parts[0].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
-      expect(parts[1].toString()).toBe('3 points: (-1, 0), (0, 0), (0, 1) (area: -1)');
+      expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+      expect(parts[1].toString()).toBe('3 points: (0, -1), (0, 0), (-1, 0) (area: -1)');
     });
-    test('case 11: PL, NF, NL, ..', () => {
-      //          NF
+    test('case 11: PL, PF, NL, ..', () => {
       //       PL L  NL
+      //          PF
       const parts = polplot.buildPartialsFromPoints(
         new Vector2(0, 0),
         [
           new Vector2(-1, 0),
-          new Vector2(0, 1),
+          new Vector2(0, -1),
           new Vector2(1, 0),
           null,
         ],
@@ -243,9 +221,9 @@ describe('PolPlot', () => {
         new Line(0, -1, 0, 1),
       );
       expect(parts.length).toBe(3);
-      expect(parts[0].toString()).toBe('3 points: (0, 1), (0, 0), (-1, 0) (area: 1)');
-      expect(parts[1].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
-      expect(parts[2].toString()).toBe('3 points: (-1, 0), (0, 0), (1, 0) (area: 0)');
+      expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
+      expect(parts[1].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
+      expect(parts[2].toString()).toBe('3 points: (1, 0), (0, 0), (-1, 0) (area: 0)');
     });
   });
 });

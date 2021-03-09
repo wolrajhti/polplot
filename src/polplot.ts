@@ -164,13 +164,6 @@ export class Polplot {
     }
     return parts.map(([i, j]) => {
       const polygon = new Polygon([points[i], intersection, points[j]]);
-      if (i % 2 === 0 || j % 2 === 0) {
-        if (localLine.v2.y < localLine.v1.y || localLine.v2.x >= localLine.v1.x) {
-          polygon.reverse();
-        }
-      } else if (foreignLine.v2.y < foreignLine.v1.y || foreignLine.v2.x >= foreignLine.v1.x) {
-        polygon.reverse();
-      }
       return polygon;
     });
   }
