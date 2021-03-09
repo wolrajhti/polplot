@@ -29,9 +29,7 @@ describe('PolPlot', () => {
           new Vector2(0, -1),
           new Vector2(1, 0),
           new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(4);
       expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
@@ -50,9 +48,7 @@ describe('PolPlot', () => {
           new Vector2(0, -1),
           new Vector2(1, 0),
           new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(3);
       expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
@@ -69,9 +65,7 @@ describe('PolPlot', () => {
           null,
           new Vector2(1, 0),
           new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(2);
       expect(parts[0].toString()).toBe('3 points: (1, 0), (0, 0), (0, 1) (area: 1)');
@@ -88,9 +82,7 @@ describe('PolPlot', () => {
           new Vector2(0, -1),
           null,
           new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(2);
       expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (0, 1) (area: 0)');
@@ -106,9 +98,7 @@ describe('PolPlot', () => {
           new Vector2(0, -1),
           new Vector2(1, 0),
           null,
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(2);
       expect(parts[0].toString()).toBe('3 points: (0, -1), (0, 0), (1, 0) (area: 1)');
@@ -124,9 +114,7 @@ describe('PolPlot', () => {
           null,
           new Vector2(1, 0),
           new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(3);
       expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (1, 0) (area: 0)');
@@ -143,9 +131,7 @@ describe('PolPlot', () => {
           null,
           null,
           new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(2);
       expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, 1) (area: -1)');
@@ -160,9 +146,7 @@ describe('PolPlot', () => {
           null,
           new Vector2(1, 0),
           null,
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(2);
       expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (1, 0) (area: 0)');
@@ -179,9 +163,7 @@ describe('PolPlot', () => {
           new Vector2(0, -1),
           null,
           new Vector2(0, 1),
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(3);
       expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
@@ -198,9 +180,7 @@ describe('PolPlot', () => {
           new Vector2(0, -1),
           null,
           null,
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(2);
       expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');
@@ -216,9 +196,7 @@ describe('PolPlot', () => {
           new Vector2(0, -1),
           new Vector2(1, 0),
           null,
-        ],
-        new Line(-1, 0, 1, 0),
-        new Line(0, -1, 0, 1),
+        ]
       );
       expect(parts.length).toBe(3);
       expect(parts[0].toString()).toBe('3 points: (-1, 0), (0, 0), (0, -1) (area: 1)');

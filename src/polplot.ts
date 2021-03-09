@@ -141,8 +141,6 @@ export class Polplot {
   buildPartialsFromPoints(
     intersection: Vector2,
     points: [Vector2, Vector2, Vector2, Vector2],
-    localLine: Line,
-    foreignLine: Line,
   ): Polygon[] {
     const parts: [number, number][] = [];
     for (let i = 0; i < points.length; i++) {
@@ -171,9 +169,9 @@ export class Polplot {
     lines = this.lines,
     intersectionTimes = this.intersectionTimes
   ): Polygon[] {
-    console.log('buildPartialsFromIntersectionTimes');
-    console.log('----------------------------------');
-    console.log('lines.length = ', lines.length);
+    // console.log('buildPartialsFromIntersectionTimes');
+    // console.log('----------------------------------');
+    // console.log('lines.length = ', lines.length);
     const intersectionTimesSortedIndexArray = intersectionTimes
       .map((intersectionTimesAtI, i) => {
         return intersectionTimesAtI
@@ -184,18 +182,22 @@ export class Polplot {
           })
           .sort((i, j) => intersectionTimesAtI[i] - intersectionTimesAtI[j]);
       });
-    console.log(intersectionTimesSortedIndexArray);
+    // console.log(intersectionTimesSortedIndexArray);
     const partials: Polygon[] = [];
     for (let localIndex = 0; localIndex < intersectionTimesSortedIndexArray.length; localIndex++) {
       for (let localInterIndex = 0; localInterIndex < intersectionTimesSortedIndexArray[localIndex].length; localInterIndex++) {
         const foreignIndex = intersectionTimesSortedIndexArray[localIndex][localInterIndex];
         if (localIndex < foreignIndex) {
           const inter = lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]]);
+
           const prevLocalInterIndex = localInterIndex - 1;
           const nextLocalInterIndex = localInterIndex + 1;
+
           const foreignInterIndex = intersectionTimesSortedIndexArray[foreignIndex].findIndex(i => i === localIndex);
-          const prevForeignInterIndex = foreignInterIndex - 1;
-          const nextForeignInterIndex = foreignInterIndex + 1;
+          const foreignisRightSided = this.testSide(lines[localIndex].v1, lines[localIndex].v2, lines[foreignIndex].v1);
+          const prevForeignInterIndex = foreignisRightSided ? foreignInterIndex - 1 : foreignInterIndex + 1;
+          const nextForeignInterIndex = foreignisRightSided ? foreignInterIndex + 1 : foreignInterIndex - 1;
+
           // console.log(`
           //   localIndex: ${localIndex}
           //   localIntersections ${intersectionTimesSortedIndexArray[localIndex]
@@ -206,16 +208,17 @@ export class Polplot {
           //     .map((_, i) => i === foreignInterIndex ? `[${_}]` : _)
           //     .join(', ')}
           // `);
+
           const prevLocalInter = 0 < localInterIndex
             ? lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][prevLocalInterIndex]])
             : null;
           const nextLocalInter = localInterIndex < intersectionTimesSortedIndexArray[localIndex].length - 1
             ? lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][nextLocalInterIndex]])
             : null;
-          const prevForeignInter = 0 < foreignInterIndex
+          const prevForeignInter = -1 < prevForeignInterIndex && prevForeignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length
             ? lines[foreignIndex].pointAt(intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][prevForeignInterIndex]])
             : null;
-          const nextForeignInter = foreignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length - 1
+          const nextForeignInter = -1 < nextForeignInterIndex && nextForeignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length
             ? lines[foreignIndex].pointAt(intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][nextForeignInterIndex]])
             : null;
           //                        ^
@@ -227,15 +230,13 @@ export class Polplot {
           //                prevForeignInter
           //                        |
           const parts = this.buildPartialsFromPoints(
-            inter,
+            inter, 
             [
               prevLocalInter,
               nextForeignInter,
               nextLocalInter,
               prevForeignInter
-            ],
-            lines[localIndex],
-            lines[foreignIndex]
+            ]
           );
           partials.push(...parts);
         }
@@ -245,37 +246,42 @@ export class Polplot {
     return partials;
   }
   buildPolygonsFromPartials(partials: Polygon[]): Polygon[] {
+    // TODO à simplifier
     const polygons: Polygon[] = [];
     let i = 0;
     while (i < partials.length) {
       for (let j = 0; j < partials.length; j++) {
         if (i !== j) {
           if (this.partialsAreConnected(partials[i], partials[j])) {
-            console.log(`
-              partials[i]: ${partials[i].toString()},
-              partials[j]: ${partials[j].toString()},
-            `);
+            // console.log(`
+            //   partials[i]: ${partials[i].toString()},
+            //   partials[j]: ${partials[j].toString()},
+            // `);
             partials[i].vertices.splice(-2, 2, ...partials[j].vertices);
-            console.log(`
-              partials[i]: ${partials[i].toString()} [NEW],
-            `);
+            // console.log(`
+            //   partials[i]: ${partials[i].toString()} [NEW],
+            // `);
             partials.splice(j, 1);
             if (j < i) {
               i--;
             }
             if (this.partialsAreConnected(partials[i], partials[i])) {
               partials[i].vertices.splice(0, 2);
-              console.log(`
-                new connected polygon: ${partials[i].toString()}
-              `);
-              polygons.push(partials[i]);
+              // console.log(`
+              //   new connected polygon: ${partials[i].toString()}
+              // `);
+              if (partials[i].area() > 0) {
+                polygons.push(partials[i]);
+              }
               partials.splice(i, 1);
             } else if (partials[i].vertices[0].equals(partials[i].vertices[partials[i].vertices.length - 1])) {
               partials[i].vertices.pop();
-              console.log(`
-                new closed polygon: ${partials[i].toString()}
-              `);
-              polygons.push(partials[i]);
+              // console.log(`
+              //   new closed polygon: ${partials[i].toString()}
+              // `);
+              if (partials[i].area() > 0) {
+                polygons.push(partials[i]);
+              }
               partials.splice(i, 1);
             }
             i = -1;
@@ -287,8 +293,8 @@ export class Polplot {
     }
     // console.log('incomplete polygons');
     // partials.map(p => console.log(p.toString()));
-    console.log('polygons', polygons);
-    polygons.map(p => console.log(p.toString()));
+    // console.log('polygons', polygons);
+    // polygons.map(p => console.log(p.toString()));
     return polygons;
   }
 }
