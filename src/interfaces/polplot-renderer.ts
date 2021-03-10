@@ -3,7 +3,7 @@ import { Polygon } from "../polygon";
 import { Vector2 } from "../vector2";
 
 export interface PolplotRenderer {
-  drawLine(line: Line): void;
+  drawLine(line: Line, name: string): void;
   eraseLine(line: Line): void;
   setMouseDownHandler(handler: (event: MouseEvent) => void): void
   setMouseUpHandler(handler: (event: MouseEvent) => void): void

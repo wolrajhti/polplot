@@ -37,11 +37,11 @@ export class Polplot {
         draggedVector2.x += event.movementX;
         draggedVector2.y += event.movementY;
         this.updateIntersectionTimes(this.lines[draggedLineIndex]);
-        this.renderer.drawLine(this.lines[draggedLineIndex]);
+        this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
       } else if (draggedLineIndex !== -1) {
         this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
         this.updateIntersectionTimes(this.lines[draggedLineIndex]);
-        this.renderer.drawLine(this.lines[draggedLineIndex]);
+        this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
       }
     });
   }
@@ -61,7 +61,7 @@ export class Polplot {
   addLine(line: Line): void {
     this.addIntersectionTimes(line);
     this.lines.push(line);
-    this.renderer.drawLine(line);
+    this.renderer.drawLine(line, (this.lines.length - 1).toString());
   }
   addIntersectionTimes(
     line: Line,

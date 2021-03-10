@@ -20,9 +20,18 @@ anchorTemplate.setAttribute(
 );
 anchorTemplate.setAttribute('fill', 'white');
 
+const textTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+textTemplate.setAttribute('text-anchor', 'middle');
+textTemplate.setAttribute('alignment-baseline', 'central');
+textTemplate.setAttribute('font-family', 'consolas, "Liberation Mono", courier, monospace');
+textTemplate.setAttribute('font-weight', '100');
+textTemplate.setAttribute('font-size', '14px');
+
 gTemplate.appendChild(lineTemplate);
 gTemplate.appendChild(anchorTemplate);
 gTemplate.appendChild(anchorTemplate.cloneNode());
+gTemplate.appendChild(textTemplate);
+gTemplate.appendChild(textTemplate.cloneNode());
 
 const pointTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
 pointTemplate.setAttribute('fill', 'green');
@@ -61,7 +70,7 @@ export class SvgRenderer implements PolplotRenderer {
   setMouseMoveHandler(handler: (event: MouseEvent) => void): void {
     this._setEventHandler('mousemove', handler);
   }
-  drawLine(line: Line): void {
+  drawLine(line: Line, name: string): void {
     let svgG: SVGGElement;
     if (!this.svgGByLine.has(line)) {
       svgG = gTemplate.cloneNode(true) as SVGGElement;
@@ -74,6 +83,8 @@ export class SvgRenderer implements PolplotRenderer {
     const svgLine = svgG.children[0] as SVGLineElement;
     const svgPathAnchorStart = svgG.children[1] as SVGPathElement;
     const svgPathAnchorEnd = svgG.children[2] as SVGPathElement;
+    const svgTextStart = svgG.children[3] as SVGTextElement;
+    const svgTextEnd = svgG.children[4] as SVGTextElement;
     const x1 = line.x1.toFixed();
     const y1 = line.y1.toFixed();
     const x2 = line.x2.toFixed();
@@ -82,9 +93,15 @@ export class SvgRenderer implements PolplotRenderer {
     svgLine.setAttribute('y1', y1);
     svgLine.setAttribute('x2', x2);
     svgLine.setAttribute('y2', y2);
+    svgTextStart.innerHTML = name;
+    svgTextEnd.innerHTML = name;
     const angle = 180 * (line.v2.sub(line.v1).angle() - Math.PI / 2) / Math.PI;
+    const before = line.before(14);
+    const after = line.after(14);
     svgPathAnchorStart.setAttribute('transform', `translate(${x1}, ${y1}) rotate(${isNaN(angle) ? 0 : angle})`);
     svgPathAnchorEnd.setAttribute('transform', `translate(${x2}, ${y2}) rotate(${isNaN(angle) ? 0 : 180 + angle})`);
+    svgTextStart.setAttribute('transform', `translate(${before ? before.x.toFixed() : x1}, ${before ? before.y.toFixed() : y1})`);
+    svgTextEnd.setAttribute('transform', `translate(${after ? after.x.toFixed() : x2}, ${after ? after.y.toFixed() : y2})`);
   }
   eraseLine(line: Line): void {
     const svgG = this.svgGByLine.get(line);
