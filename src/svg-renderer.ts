@@ -100,8 +100,8 @@ export class SvgRenderer implements PolplotRenderer {
     const after = line.after(14);
     svgPathAnchorStart.setAttribute('transform', `translate(${x1}, ${y1}) rotate(${isNaN(angle) ? 0 : angle})`);
     svgPathAnchorEnd.setAttribute('transform', `translate(${x2}, ${y2}) rotate(${isNaN(angle) ? 0 : 180 + angle})`);
-    svgTextStart.setAttribute('transform', `translate(${before ? before.x.toFixed() : x1}, ${before ? before.y.toFixed() : y1})`);
-    svgTextEnd.setAttribute('transform', `translate(${after ? after.x.toFixed() : x2}, ${after ? after.y.toFixed() : y2})`);
+    svgTextStart.setAttribute('transform', `translate(${isNaN(before.x) ? x1 : before.x.toFixed()}, ${isNaN(before.y) ? y1 : before.y.toFixed()})`);
+    svgTextEnd.setAttribute('transform', `translate(${isNaN(after.x) ? x2 : after.x.toFixed()}, ${isNaN(after.y) ? y2 : after.y.toFixed()})`);
   }
   eraseLine(line: Line): void {
     const svgG = this.svgGByLine.get(line);
