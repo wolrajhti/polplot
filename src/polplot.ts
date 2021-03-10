@@ -114,10 +114,10 @@ export class Polplot {
     this.renderIntersections();
   }
   renderIntersections(): void {
-    this.renderer.clearIntersections();
-    this.intersections.forEach(intersection => {
-      this.renderer.drawPoint(intersection);
-    });
+    // this.renderer.clearIntersections();
+    // this.intersections.forEach(intersection => {
+    //   this.renderer.drawPoint(intersection);
+    // });
     this.renderer.clearPolygons();
     const partials = this.buildPartialsFromIntersectionTimes();
     const polygonIndexes = this.buildPolygonIndexesFromPartials(partials);
@@ -131,8 +131,11 @@ export class Polplot {
   testSide(u: Vector2, v: Vector2, w: Vector2): boolean {
     return v.sub(u).cross(w.sub(u)) > 0;
   }
-  partialsOverlaps(p1: number[], p2: number[]): boolean {
-    return p1[p1.length - 2] === p2[0] && p1[p1.length - 1] === p2[1];
+  partialsOverlaps(p1: number[], p2: number[]): 2 | 0 {
+    return p1[p1.length - 2] === p2[0] && p1[p1.length - 1] === p2[1] ? 2 : 0;
+  }
+  partialsMeet(p1: number[], p2: number[]): 1 | 0 {
+    return p1[p1.length - 1] === p2[0] ? 1 : 0;
   }
   buildPartialsFromIntersectionIndexes(
     center: number,
@@ -242,6 +245,7 @@ export class Polplot {
   buildPolygonIndexesFromPartials(partials: [number, number, number][]): number[][] {
     const polygonIndexes: number[][] = [];
     let i = 0;
+    let overlap: number;
     while (i < partials.length) {
       for (let j = 0; j < partials.length; j++) {
         if (i !== j) {
@@ -258,8 +262,9 @@ export class Polplot {
             if (j < i) {
               i--;
             }
-            if (this.partialsOverlaps(partials[i], partials[i])) {
-              partials[i].splice(0, 2);
+            overlap = this.partialsOverlaps(partials[i], partials[i]) || this.partialsMeet(partials[i], partials[i]);
+            if (overlap > 0) {
+              partials[i].splice(0, overlap);
               // console.log(`
               //   partials[i]: ${partials[i].toString()} [CLOSED],
               // `);
