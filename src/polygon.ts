@@ -17,18 +17,17 @@ export class Polygon {
     }
     return a;
   }
-  shareEdge(u: Vector2, v: Vector2): boolean {
-    let i = this.vertices.length - 1;
-    for (let j = 0; j < this.vertices.length; j++) {
-      if (this.vertices[i].equals(u) && this.vertices[j].equals(v)) {
-        return true;
+  contains(v: Vector2): boolean {
+    let c = false;
+    for (let i = 0, j = this.vertices.length - 1; i < this.vertices.length; j = i++) {
+      if (
+        this.vertices[i].y > v.y !== this.vertices[j].y > v.y &&
+        v.x < (this.vertices[j].x - this.vertices[i].x) * (v.y - this.vertices[i].y) / (this.vertices[j].y - this.vertices[i].y) + this.vertices[i].x
+      ) {
+        c = !c;
       }
-      i = j;
     }
-    return false;
-  }
-  intersectionWith(line: Line) {
-    
+    return c;
   }
   reverse(): void {
     this.vertices.reverse();
