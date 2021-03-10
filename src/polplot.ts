@@ -6,7 +6,8 @@ import { Vector2 } from "./vector2";
 export class Polplot {
   lines: Line[] = [];
   intersectionTimes: number[][] = [];
-  intersectionPoints: Vector2[][] = [];
+  intersections: Vector2[] = [];
+  intersectionIndex: number[][] = [];
   constructor(readonly renderer: PolplotRenderer) {
     let draggedLine: Line;
     let draggedVector2: Vector2;
@@ -69,33 +70,32 @@ export class Polplot {
     line: Line,
     lines = this.lines,
     intersectionTimes = this.intersectionTimes,
-    intersectionPoints = this.intersectionPoints
+    intersections = this.intersections,
+    intersectionIndex = this.intersectionIndex,
   ): void {
     const newIntersectionTimes: number[] = [];
-    const newIntersectionPoints: Vector2[] = [];
+    const newIntersectionIndex: number[] = [];
     let times: Vector2;
     for (let i = 0; i < lines.length; i++) {
       times = lines[i].intersectionTimesWith(line);
       intersectionTimes[i].push(times.x);
-      intersectionPoints[i].push(
-        0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
-          ? lines[i].v1.add(lines[i].v2.sub(lines[i].v1).mul(times.x))
-          : null
-      );
+      intersections.push(lines[i].pointAt(times.x));
+      intersectionIndex[i].push(intersections.length - 1);
       newIntersectionTimes.push(times.y);
-      newIntersectionPoints.push(null);
+      newIntersectionIndex.push(intersections.length - 1);
     }
     newIntersectionTimes.push(NaN);
-    newIntersectionPoints.push(null);
+    newIntersectionIndex.push(null);
     intersectionTimes.push(newIntersectionTimes);
-    intersectionPoints.push(newIntersectionPoints);
+    intersectionIndex.push(newIntersectionIndex);
     this.renderIntersections();
   }
   updateIntersectionTimes(
     line: Line,
     lines = this.lines,
     intersectionTimes = this.intersectionTimes,
-    intersectionPoints = this.intersectionPoints
+    intersections = this.intersections,
+    intersectionIndex = this.intersectionIndex,
   ): void {
     const index = lines.indexOf(line);
     let times: Vector2;
@@ -105,13 +105,9 @@ export class Polplot {
         intersectionTimes[i][index] = times.x;
         intersectionTimes[index][i] = times.y;
         if (i < index) {
-          intersectionPoints[i][index] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
-            ? lines[i].v1.add(lines[i].v2.sub(lines[i].v1).mul(times.x))
-            : null;
+          intersections[intersectionIndex[i][index]] = lines[i].pointAt(times.x);
         } else {
-          intersectionPoints[index][i] = 0 <= times.x && times.x <= 1 && 0 <= times.y && times.y <= 1
-            ? lines[i].v1.add(lines[i].v2.sub(lines[i].v1).mul(times.x))
-            : null;
+          intersections[intersectionIndex[index][i]] = lines[i].pointAt(times.x);
         }
       }
     }
@@ -119,56 +115,54 @@ export class Polplot {
   }
   renderIntersections(): void {
     this.renderer.clearIntersections();
-    this.intersectionPoints.forEach(intersectionPoints => {
-      intersectionPoints.forEach(intersectionPoint => {
-        if (intersectionPoint) {
-          this.renderer.drawPoint(intersectionPoint);
-        }
-      });
+    this.intersections.forEach(intersection => {
+      this.renderer.drawPoint(intersection);
     });
     this.renderer.clearPolygons();
     const partials = this.buildPartialsFromIntersectionTimes();
-    this.buildPolygonsFromPartials(partials)
-      .forEach(polygon => this.renderer.drawPolygon(polygon));
+    const polygonIndexes = this.buildPolygonIndexesFromPartials(partials);
+    const polygons = polygonIndexes.map(polygonIndex => new Polygon(polygonIndex.map(i => this.intersections[i])));
+    polygons.forEach(polygon => {
+      if (polygon.area() > 0) {
+        this.renderer.drawPolygon(polygon);
+      }
+    });
   }
   testSide(u: Vector2, v: Vector2, w: Vector2): boolean {
     return v.sub(u).cross(w.sub(u)) > 0;
   }
-  partialsOverlaps(p1: Polygon, p2: Polygon): boolean {
-    return p1.vertices[p1.vertices.length - 2].equals(p2.vertices[0]) &&
-           p1.vertices[p1.vertices.length - 1].equals(p2.vertices[1]);
+  partialsOverlaps(p1: number[], p2: number[]): boolean {
+    return p1[p1.length - 2] === p2[0] && p1[p1.length - 1] === p2[1];
   }
-  buildPartialsFromPoints(
-    intersection: Vector2,
-    points: [Vector2, Vector2, Vector2, Vector2],
-  ): Polygon[] {
-    const parts: [number, number][] = [];
-    for (let i = 0; i < points.length; i++) {
-      if (points[i]) {
+  buildPartialsFromIntersectionIndexes(
+    center: number,
+    indexes: [number, number, number, number],
+  ): [number, number, number][] {
+    const parts: [number, number, number][] = [];
+    for (let i = 0; i < indexes.length; i++) {
+      if (typeof indexes[i] === 'number') {
         let j = i + 1;
-        if (j === points.length) {
+        if (j === indexes.length) {
           j = 0;
         }
-        while (!points[j]) {
+        while (typeof indexes[j] !== 'number') {
           j++;
-          if (j === points.length) {
+          if (j === indexes.length) {
             j = 0;
           }
         }
         if (i !== j) {
-          parts.push([i, j]);
+          parts.push([indexes[i], center, indexes[j]]);
         }
       }
     }
-    return parts.map(([i, j]) => {
-      const polygon = new Polygon([points[i], intersection, points[j]]);
-      return polygon;
-    });
+    return parts;
   }
   buildPartialsFromIntersectionTimes(
     lines = this.lines,
-    intersectionTimes = this.intersectionTimes
-  ): Polygon[] {
+    intersectionTimes = this.intersectionTimes,
+    intersectionIndex = this.intersectionIndex
+  ): [number, number, number][] {
     // console.log('buildPartialsFromIntersectionTimes');
     // console.log('----------------------------------');
     // console.log('lines.length = ', lines.length);
@@ -183,12 +177,12 @@ export class Polplot {
           .sort((i, j) => intersectionTimesAtI[i] - intersectionTimesAtI[j]);
       });
     // console.log(intersectionTimesSortedIndexArray);
-    const partials: Polygon[] = [];
+    const partials: [number, number, number][] = [];
     for (let localIndex = 0; localIndex < intersectionTimesSortedIndexArray.length; localIndex++) {
       for (let localInterIndex = 0; localInterIndex < intersectionTimesSortedIndexArray[localIndex].length; localInterIndex++) {
         const foreignIndex = intersectionTimesSortedIndexArray[localIndex][localInterIndex];
         if (localIndex < foreignIndex) {
-          const inter = lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]]);
+          const inter = intersectionIndex[localIndex][intersectionTimesSortedIndexArray[localIndex][localInterIndex]];
 
           const prevLocalInterIndex = localInterIndex - 1;
           const nextLocalInterIndex = localInterIndex + 1;
@@ -210,16 +204,16 @@ export class Polplot {
           // `);
 
           const prevLocalInter = 0 < localInterIndex
-            ? lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][prevLocalInterIndex]])
+            ? intersectionIndex[localIndex][intersectionTimesSortedIndexArray[localIndex][prevLocalInterIndex]]
             : null;
           const nextLocalInter = localInterIndex < intersectionTimesSortedIndexArray[localIndex].length - 1
-            ? lines[localIndex].pointAt(intersectionTimes[localIndex][intersectionTimesSortedIndexArray[localIndex][nextLocalInterIndex]])
+            ? intersectionIndex[localIndex][intersectionTimesSortedIndexArray[localIndex][nextLocalInterIndex]]
             : null;
           const prevForeignInter = -1 < prevForeignInterIndex && prevForeignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length
-            ? lines[foreignIndex].pointAt(intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][prevForeignInterIndex]])
+            ? intersectionIndex[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][prevForeignInterIndex]]
             : null;
           const nextForeignInter = -1 < nextForeignInterIndex && nextForeignInterIndex < intersectionTimesSortedIndexArray[foreignIndex].length
-            ? lines[foreignIndex].pointAt(intersectionTimes[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][nextForeignInterIndex]])
+            ? intersectionIndex[foreignIndex][intersectionTimesSortedIndexArray[foreignIndex][nextForeignInterIndex]]
             : null;
           //                        ^
           //                        |
@@ -229,8 +223,8 @@ export class Polplot {
           //                        |
           //                prevForeignInter
           //                        |
-          const parts = this.buildPartialsFromPoints(
-            inter, 
+          const parts = this.buildPartialsFromIntersectionIndexes(
+            inter,
             [
               prevLocalInter,
               nextForeignInter,
@@ -245,8 +239,8 @@ export class Polplot {
     // console.log('partials', partials);
     return partials;
   }
-  buildPolygonsFromPartials(partials: Polygon[]): Polygon[] {
-    const polygons: Polygon[] = [];
+  buildPolygonIndexesFromPartials(partials: [number, number, number][]): number[][] {
+    const polygonIndexes: number[][] = [];
     let i = 0;
     while (i < partials.length) {
       for (let j = 0; j < partials.length; j++) {
@@ -256,7 +250,7 @@ export class Polplot {
             //   partials[i]: ${partials[i].toString()},
             //   partials[j]: ${partials[j].toString()},
             // `);
-            partials[i].vertices.splice(-2, 2, ...partials[j].vertices);
+            partials[i].splice(-2, 2, ...partials[j]);
             // console.log(`
             //   partials[i]: ${partials[i].toString()} [NEW],
             // `);
@@ -265,14 +259,11 @@ export class Polplot {
               i--;
             }
             if (this.partialsOverlaps(partials[i], partials[i])) {
-              partials[i].vertices.splice(0, 2);
+              partials[i].splice(0, 2);
               // console.log(`
               //   partials[i]: ${partials[i].toString()} [CLOSED],
               // `);
-              if (partials[i].area() > 0) {
-                polygons.push(partials[i]);
-                // console.log('[NEW POLYGON]');
-              }
+              polygonIndexes.push(partials[i]);
               partials.splice(i, 1);
             }
             i = -1;
@@ -286,7 +277,7 @@ export class Polplot {
     // partials.map(p => console.log(p.toString()));
     // console.log('polygons', polygons);
     // polygons.map(p => console.log(p.toString()));
-    return polygons;
+    return polygonIndexes;
   }
 }
 
