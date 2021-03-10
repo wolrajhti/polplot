@@ -134,7 +134,7 @@ export class Polplot {
   testSide(u: Vector2, v: Vector2, w: Vector2): boolean {
     return v.sub(u).cross(w.sub(u)) > 0;
   }
-  partialsAreConnected(p1: Polygon, p2: Polygon): boolean {
+  partialsOverlaps(p1: Polygon, p2: Polygon): boolean {
     return p1.vertices[p1.vertices.length - 2].equals(p2.vertices[0]) &&
            p1.vertices[p1.vertices.length - 1].equals(p2.vertices[1]);
   }
@@ -246,13 +246,12 @@ export class Polplot {
     return partials;
   }
   buildPolygonsFromPartials(partials: Polygon[]): Polygon[] {
-    // TODO à simplifier
     const polygons: Polygon[] = [];
     let i = 0;
     while (i < partials.length) {
       for (let j = 0; j < partials.length; j++) {
         if (i !== j) {
-          if (this.partialsAreConnected(partials[i], partials[j])) {
+          if (this.partialsOverlaps(partials[i], partials[j])) {
             // console.log(`
             //   partials[i]: ${partials[i].toString()},
             //   partials[j]: ${partials[j].toString()},
@@ -265,22 +264,14 @@ export class Polplot {
             if (j < i) {
               i--;
             }
-            if (this.partialsAreConnected(partials[i], partials[i])) {
+            if (this.partialsOverlaps(partials[i], partials[i])) {
               partials[i].vertices.splice(0, 2);
               // console.log(`
-              //   new connected polygon: ${partials[i].toString()}
+              //   partials[i]: ${partials[i].toString()} [CLOSED],
               // `);
               if (partials[i].area() > 0) {
                 polygons.push(partials[i]);
-              }
-              partials.splice(i, 1);
-            } else if (partials[i].vertices[0].equals(partials[i].vertices[partials[i].vertices.length - 1])) {
-              partials[i].vertices.pop();
-              // console.log(`
-              //   new closed polygon: ${partials[i].toString()}
-              // `);
-              if (partials[i].area() > 0) {
-                polygons.push(partials[i]);
+                // console.log('[NEW POLYGON]');
               }
               partials.splice(i, 1);
             }
