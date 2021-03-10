@@ -3,68 +3,65 @@ import { Line } from "./line";
 import { Polygon } from "./polygon";
 import { Vector2 } from "./vector2";
 
+const CLICK_THRESHOLD = 20;
+
 export class Polplot {
   lines: Line[] = [];
   intersectionTimes: number[][] = [];
   intersections: Vector2[] = [];
   intersectionIndex: number[][] = [];
   constructor(readonly renderer: PolplotRenderer) {
-    let draggedLine: Line;
+    let draggedLineIndex = -1;
     let draggedVector2: Vector2;
-
-    this.renderer.setMouseDownHandler((event, clickedLine, clickedVector2) => {
-      draggedLine = clickedLine || null;
-      draggedVector2 = clickedVector2 || null;
-      if (!draggedLine) {
-        draggedLine = new Line(event.clientX, event.clientY, event.clientX, event.clientY);
-        draggedVector2 = draggedLine.v2;
-        this.addLine(draggedLine);
+    this.renderer.setMouseDownHandler(event => {
+      const mouse = new Vector2(event.clientX, event.clientY);
+      draggedLineIndex = this.nearestLineIndexFrom(mouse, CLICK_THRESHOLD);
+      if (draggedLineIndex === -1) {
+        this.addLine(new Line(mouse.x, mouse.y, mouse.x, mouse.y));
+        draggedLineIndex = this.lines.length - 1;
+        draggedVector2 = this.lines[draggedLineIndex].v2;
+      } else if (mouse.sub(this.lines[draggedLineIndex].v1).len() < CLICK_THRESHOLD) {
+        draggedVector2 = this.lines[draggedLineIndex].v1;
+      } else if (mouse.sub(this.lines[draggedLineIndex].v2).len() < CLICK_THRESHOLD) {
+        draggedVector2 = this.lines[draggedLineIndex].v2;
       }
     });
 
-    let selectedLine: Line;
-    this.renderer.setMouseUpHandler((event, clickedLine, clickedVector2) => {
-      if (clickedLine) {
-        if (selectedLine && selectedLine !== clickedLine) {
-          this.renderer.drawLine(selectedLine, clickedLine === hoveredLine, false);
-        }
-        selectedLine = clickedLine;
-        this.renderer.drawLine(selectedLine, clickedLine === hoveredLine, true);
-      } else if (selectedLine) {
-        this.renderer.drawLine(selectedLine, clickedLine === hoveredLine, false);
-      }
-      draggedLine = null;
+    this.renderer.setMouseUpHandler(event => {
+      draggedLineIndex = -1;
       draggedVector2 = null;
     });
 
-    let hoveredLine: Line;
-    this.renderer.setMouseMoveHandler((event, clickedLine, clickedVector2) => {
-      if (clickedLine) {
-        if (hoveredLine && hoveredLine !== clickedLine) {
-          this.renderer.drawLine(hoveredLine, false, clickedLine === selectedLine);
-        }
-        hoveredLine = clickedLine;
-        this.renderer.drawLine(hoveredLine, true, clickedLine === selectedLine); 
-      } else if (hoveredLine) {
-        this.renderer.drawLine(hoveredLine, false, clickedLine === selectedLine);
-        hoveredLine = null;
-      }
-      if (draggedLine) {
-        if (draggedVector2) {
-          draggedVector2.x = event.clientX;
-          draggedVector2.y = event.clientY;
-        } else {
-          draggedLine.update(event.movementX, event.movementY, event.movementX, event.movementY);
-        }
-        this.updateIntersectionTimes(draggedLine);
-        this.renderer.drawLine(draggedLine, draggedLine === hoveredLine, draggedLine === selectedLine);
+    this.renderer.setMouseMoveHandler(event => {
+      if (draggedVector2) {
+        draggedVector2.x += event.movementX;
+        draggedVector2.y += event.movementY;
+        this.updateIntersectionTimes(this.lines[draggedLineIndex]);
+        this.renderer.drawLine(this.lines[draggedLineIndex]);
+      } else if (draggedLineIndex !== -1) {
+        this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
+        this.updateIntersectionTimes(this.lines[draggedLineIndex]);
+        this.renderer.drawLine(this.lines[draggedLineIndex]);
       }
     });
+  }
+  nearestLineIndexFrom(v: Vector2, threshold = +Infinity): number {
+    let nearestLineIndex = -1;
+    let nearestDist = +Infinity;
+    let dist: number;
+    for (let i = 0; i < this.lines.length; i++) {
+      dist = this.lines[i].nearestTo(v).sub(v).len();
+      if (dist < threshold && dist < nearestDist) {
+        nearestDist = dist;
+        nearestLineIndex = i;
+      }
+    }
+    return nearestLineIndex;
   }
   addLine(line: Line): void {
     this.addIntersectionTimes(line);
     this.lines.push(line);
-    this.renderer.drawLine(line, false, false);
+    this.renderer.drawLine(line);
   }
   addIntersectionTimes(
     line: Line,

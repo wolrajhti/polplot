@@ -18,8 +18,17 @@ export class Vector2 {
   cross(other: Vector2): number {
     return Vector2.cross(this, other);
   }
+  static len2Raw(x: number, y: number): number {
+    return Math.pow(x, 2) + Math.pow(y, 2);
+  }
+  static len2(u: Vector2): number {
+    return this.len2Raw(u.x, u.y);
+  }
+  len2(): number {
+    return Vector2.len2(this);
+  }
   static lenRaw(x: number, y: number): number {
-    return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    return Math.sqrt(this.len2Raw(x, y));
   }
   static len(u: Vector2): number {
     return this.lenRaw(u.x, u.y);

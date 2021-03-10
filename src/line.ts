@@ -45,4 +45,12 @@ export class Line {
     this.v2.x += dx2;
     this.v2.y += dy2;
   }
+  nearestTo(p: Vector2): Vector2 {
+    if (this.v1.equals(this.v2)) {
+      return new Vector2(this.v1.x, this.v1.y);
+    }
+    const u = this.v2.sub(this.v1);
+    const t = u.dot(p.sub(this.v1)) / u.len2();
+    return this.pointAt(Math.max(0, Math.min(t, 1)));
+  }
 }

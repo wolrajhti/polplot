@@ -1,4 +1,4 @@
-import { ClickHandler, PolplotRenderer } from "./interfaces/polplot-renderer";
+import { PolplotRenderer } from "./interfaces/polplot-renderer";
 import { Line } from "./line";
 import { Polygon } from "./polygon";
 import { Vector2 } from "./vector2";
@@ -40,52 +40,28 @@ export class SvgRenderer implements PolplotRenderer {
   private polygonContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private svgGByLine = new Map<Line, SVGGElement>();
   private lineBySvgG = new Map<SVGGElement, Line>();
-  private onMouseDown: (event: MouseEvent) => any;
-  private onMouseUp: (event: MouseEvent) => any;
-  private onMouseMove: (event: MouseEvent) => any;
+  private handlers: Record<string, (event: MouseEvent) => void> = {};
   constructor() {
     this.svg.appendChild(this.intersectionContainer);
     this.svg.appendChild(this.polygonContainer);
   }
-  clickHandlerWrapper(clickHandler: ClickHandler): (event: MouseEvent) => any {
-    return event => {
-      const elementAt = document.elementFromPoint(event.clientX, event.clientY);
-      const line = this.lineBySvgG.get(elementAt.parentNode as SVGGElement);
-      if (elementAt instanceof SVGPathElement && elementAt.parentNode !== this.polygonContainer) {
-        if (elementAt.parentNode.children[1] === elementAt) {
-          clickHandler(event, line, line.v1);
-        } else {
-          clickHandler(event, line, line.v2);
-        }
-      } else if (elementAt instanceof SVGLineElement) {
-        clickHandler(event, line);
-      } else {
-        clickHandler(event);
-      }
-    };
-  }
-  setMouseDownHandler(clickHandler: ClickHandler): void {
-    if (this.onMouseDown) {
-      this.svg.removeEventListener('mousedown', this.onMouseDown);
+  private _setEventHandler(event: string, handler: (event: MouseEvent) => void): void {
+    if (this.handlers[event]) {
+      this.svg.removeEventListener(event, this.handlers[event]);
     }
-    this.onMouseDown = this.clickHandlerWrapper(clickHandler);
-    this.svg.addEventListener('mousedown', this.onMouseDown);
+    this.handlers[event] = handler;
+    this.svg.addEventListener(event, this.handlers[event]);
   }
-  setMouseUpHandler(clickHandler: ClickHandler): void {
-    if (this.onMouseUp) {
-      this.svg.removeEventListener('mouseup', this.onMouseUp);
-    }
-    this.onMouseUp = this.clickHandlerWrapper(clickHandler);
-    this.svg.addEventListener('mouseup', this.onMouseUp);
+  setMouseDownHandler(handler: (event: MouseEvent) => void): void {
+    this._setEventHandler('mousedown', handler);
   }
-  setMouseMoveHandler(clickHandler: ClickHandler): void {
-    if (this.onMouseMove) {
-      this.svg.removeEventListener('mousemove', this.onMouseMove);
-    }
-    this.onMouseMove = this.clickHandlerWrapper(clickHandler);
-    this.svg.addEventListener('mousemove', this.onMouseMove);
+  setMouseUpHandler(handler: (event: MouseEvent) => void): void {
+    this._setEventHandler('mouseup', handler);
   }
-  drawLine(line: Line, isHovered = false, isSelected = false): void {
+  setMouseMoveHandler(handler: (event: MouseEvent) => void): void {
+    this._setEventHandler('mousemove', handler);
+  }
+  drawLine(line: Line): void {
     let svgG: SVGGElement;
     if (!this.svgGByLine.has(line)) {
       svgG = gTemplate.cloneNode(true) as SVGGElement;
@@ -106,16 +82,6 @@ export class SvgRenderer implements PolplotRenderer {
     svgLine.setAttribute('y1', y1);
     svgLine.setAttribute('x2', x2);
     svgLine.setAttribute('y2', y2);
-    if (isHovered) {
-      svgG.setAttribute('stroke-width', '0.8px');
-    } else {
-      svgG.setAttribute('stroke-width', '0.4px');
-    }
-    if (isSelected) {
-      svgG.setAttribute('stroke', '#19a194');
-    } else {
-      svgG.setAttribute('stroke', 'black');
-    }
     const angle = 180 * (line.v2.sub(line.v1).angle() - Math.PI / 2) / Math.PI;
     svgPathAnchorStart.setAttribute('transform', `translate(${x1}, ${y1}) rotate(${isNaN(angle) ? 0 : angle})`);
     svgPathAnchorEnd.setAttribute('transform', `translate(${x2}, ${y2}) rotate(${isNaN(angle) ? 0 : 180 + angle})`);
