@@ -40,19 +40,21 @@ pointTemplate.setAttribute('r', '3');
 const polygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 polygonTemplate.setAttribute('fill', 'green');
 polygonTemplate.setAttribute('fill-opacity', '0.7');
-polygonTemplate.setAttribute('stroke-width', '3');
-polygonTemplate.setAttribute('stroke', 'grey');
+polygonTemplate.setAttribute('stroke-width', '0.8');
+polygonTemplate.setAttribute('stroke', 'black');
 
 export class SvgRenderer implements PolplotRenderer {
   readonly svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   private intersectionContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private polygonContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  private lineContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private svgGByLine = new Map<Line, SVGGElement>();
-  private lineBySvgG = new Map<SVGGElement, Line>();
+  private svgPathByPolygon = new Map<Polygon, SVGPathElement>();
   private handlers: Record<string, (event: MouseEvent) => void> = {};
   constructor() {
     this.svg.appendChild(this.intersectionContainer);
     this.svg.appendChild(this.polygonContainer);
+    this.svg.appendChild(this.lineContainer);
   }
   private _setEventHandler(event: string, handler: (event: MouseEvent) => void): void {
     if (this.handlers[event]) {
@@ -74,9 +76,8 @@ export class SvgRenderer implements PolplotRenderer {
     let svgG: SVGGElement;
     if (!this.svgGByLine.has(line)) {
       svgG = gTemplate.cloneNode(true) as SVGGElement;
-      this.svg.appendChild(svgG);
+      this.lineContainer.appendChild(svgG);
       this.svgGByLine.set(line, svgG);
-      this.lineBySvgG.set(svgG, line);
     } else {
       svgG = this.svgGByLine.get(line);
     }
@@ -106,7 +107,7 @@ export class SvgRenderer implements PolplotRenderer {
   eraseLine(line: Line): void {
     const svgG = this.svgGByLine.get(line);
     if (svgG) {
-      this.svg.removeChild(svgG);
+      this.lineContainer.removeChild(svgG);
       this.svgGByLine.delete(line);
     }
   }
@@ -124,11 +125,17 @@ export class SvgRenderer implements PolplotRenderer {
   clearIntersections(): void {
     this.clearContainer(this.intersectionContainer);
   }
-  drawPolygon(polygon: Polygon): void {
-    const svgPath = polygonTemplate.cloneNode() as SVGPathElement;
+  drawPolygon(polygon: Polygon, fill = '#' + (Math.floor((16777215 - 1e5) * Math.random()) + 1e5).toString(16)): void {
+    let svgPath: SVGPathElement;
+    if (!this.svgPathByPolygon.has(polygon)) {
+      svgPath = polygonTemplate.cloneNode() as SVGPathElement;
+      this.polygonContainer.appendChild(svgPath);
+      this.svgPathByPolygon.set(polygon, svgPath);
+    } else {
+      svgPath = this.svgPathByPolygon.get(polygon);
+    }
     svgPath.setAttribute('d', 'M ' + polygon.vertices.map(v => `${v.x.toFixed()} ${v.y.toFixed()}`).join(' L ') + 'Z');
-    svgPath.setAttribute('fill', '#' + (Math.floor((16777215 - 1e5) * Math.random()) + 1e5).toString(16));
-    this.polygonContainer.appendChild(svgPath);
+    svgPath.setAttribute('fill', fill);
   }
   clearPolygons(): void {
     this.clearContainer(this.polygonContainer);

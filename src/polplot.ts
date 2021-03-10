@@ -10,6 +10,7 @@ export class Polplot {
   intersectionTimes: number[][] = [];
   intersections: Vector2[] = [];
   intersectionIndex: number[][] = [];
+  polygons: Polygon[] = [];
   constructor(readonly renderer: PolplotRenderer) {
     let draggedLineIndex = -1;
     let draggedVector2: Vector2;
@@ -32,6 +33,7 @@ export class Polplot {
       draggedVector2 = null;
     });
 
+    let polygonContainer: Polygon;
     this.renderer.setMouseMoveHandler(event => {
       if (draggedVector2) {
         draggedVector2.x += event.movementX;
@@ -42,6 +44,26 @@ export class Polplot {
         this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
         this.updateIntersectionTimes(this.lines[draggedLineIndex]);
         this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
+      }
+      // TODO: should be in a function
+      const mouse = new Vector2(event.clientX, event.clientY);
+      let isInside = false;
+      let oldPolygonContainer = polygonContainer;
+      for (const polygon of this.polygons) {
+        if (polygon.contains(mouse)) {
+          if (polygon !== polygonContainer) {
+            this.renderer.drawPolygon(polygon, 'red');
+            polygonContainer = polygon;
+          }
+          isInside = true;
+          break;
+        }
+      }
+      if (!isInside) {
+        polygonContainer = null;
+      }
+      if (oldPolygonContainer && oldPolygonContainer !== polygonContainer) {
+        this.renderer.drawPolygon(oldPolygonContainer, 'white');
       }
     });
   }
@@ -116,12 +138,14 @@ export class Polplot {
     //   this.renderer.drawPoint(intersection);
     // });
     this.renderer.clearPolygons();
+    this.polygons = [];
     const partials = this.buildPartialsFromIntersectionTimes();
     const polygonIndexes = this.buildPolygonIndexesFromPartials(partials);
     const polygons = polygonIndexes.map(polygonIndex => new Polygon(polygonIndex.map(i => this.intersections[i])));
     polygons.forEach(polygon => {
       if (polygon.area() > 0) {
-        this.renderer.drawPolygon(polygon);
+        this.polygons.push(polygon);
+        this.renderer.drawPolygon(polygon, 'white');
       }
     });
   }

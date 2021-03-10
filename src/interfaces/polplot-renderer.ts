@@ -10,6 +10,6 @@ export interface PolplotRenderer {
   setMouseMoveHandler(handler: (event: MouseEvent) => void): void
   drawPoint(point: Vector2): void;
   clearIntersections(): void;
-  drawPolygon(polygon: Polygon): void;
+  drawPolygon(polygon: Polygon, fill?: string): void;
   clearPolygons(): void;
 }
