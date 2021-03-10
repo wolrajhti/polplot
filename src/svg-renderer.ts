@@ -3,6 +3,7 @@ import { Line } from "./line";
 import { Polygon } from "./polygon";
 import { Vector2 } from "./vector2";
 
+// line
 const gTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 gTemplate.setAttribute('stroke', 'black');
 gTemplate.setAttribute('stroke-width', '0.4px');
@@ -33,10 +34,28 @@ gTemplate.appendChild(anchorTemplate.cloneNode());
 gTemplate.appendChild(textTemplate);
 gTemplate.appendChild(textTemplate.cloneNode());
 
+// point
+const gPointTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+gPointTemplate.setAttribute('stroke', 'black');
+gPointTemplate.setAttribute('stroke-width', '0.4px');
+
 const pointTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
 pointTemplate.setAttribute('fill', 'green');
 pointTemplate.setAttribute('r', '3');
 
+const textPointTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+textPointTemplate.setAttribute('transform', 'translate(0, 10)');
+textPointTemplate.setAttribute('text-anchor', 'middle');
+textPointTemplate.setAttribute('alignment-baseline', 'hanging');
+textPointTemplate.setAttribute('font-family', 'consolas, "Liberation Mono", courier, monospace');
+textPointTemplate.setAttribute('font-weight', '100');
+textPointTemplate.setAttribute('font-size', '14px');
+textPointTemplate.setAttribute('font-style', 'italic');
+
+gPointTemplate.appendChild(pointTemplate);
+gPointTemplate.appendChild(textPointTemplate);
+
+// polygon
 const polygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 polygonTemplate.setAttribute('fill', 'green');
 polygonTemplate.setAttribute('fill-opacity', '0.7');
@@ -45,16 +64,17 @@ polygonTemplate.setAttribute('stroke', 'black');
 
 export class SvgRenderer implements PolplotRenderer {
   readonly svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  private intersectionContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  private pointContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private polygonContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private lineContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private svgGByLine = new Map<Line, SVGGElement>();
   private svgPathByPolygon = new Map<Polygon, SVGPathElement>();
+  private svgGByPoint = new Map<Vector2, SVGGElement>();
   private handlers: Record<string, (event: MouseEvent) => void> = {};
   constructor() {
-    this.svg.appendChild(this.intersectionContainer);
     this.svg.appendChild(this.polygonContainer);
     this.svg.appendChild(this.lineContainer);
+    this.svg.appendChild(this.pointContainer);
   }
   private _setEventHandler(event: string, handler: (event: MouseEvent) => void): void {
     if (this.handlers[event]) {
@@ -111,11 +131,18 @@ export class SvgRenderer implements PolplotRenderer {
       this.svgGByLine.delete(line);
     }
   }
-  drawPoint(point: Vector2): void {
-    const svgCircle = pointTemplate.cloneNode() as SVGCircleElement;
-    svgCircle.setAttribute('cx', point.x.toFixed());
-    svgCircle.setAttribute('cy', point.y.toFixed());
-    this.intersectionContainer.appendChild(svgCircle);
+  drawPoint(point: Vector2, name: string): void {
+    let svgG: SVGGElement;
+    if (!this.svgGByPoint.has(point)) {
+      svgG = gPointTemplate.cloneNode(true) as SVGGElement;
+      this.pointContainer.appendChild(svgG);
+      this.svgGByPoint.set(point, svgG);
+    } else {
+      svgG = this.svgGByPoint.get(point);
+    }
+    const svgText = svgG.children[1] as SVGTextElement;
+    svgG.setAttribute('transform', `translate(${point.x.toFixed()}, ${point.y.toFixed()})`);
+    svgText.innerHTML = name;
   }
   private clearContainer(container: SVGGElement): void {
     while (container.firstChild) {
@@ -123,7 +150,7 @@ export class SvgRenderer implements PolplotRenderer {
     }
   }
   clearIntersections(): void {
-    this.clearContainer(this.intersectionContainer);
+    this.clearContainer(this.pointContainer);
   }
   drawPolygon(polygon: Polygon, fill = '#' + (Math.floor((16777215 - 1e5) * Math.random()) + 1e5).toString(16)): void {
     let svgPath: SVGPathElement;

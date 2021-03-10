@@ -8,7 +8,7 @@ export interface PolplotRenderer {
   setMouseDownHandler(handler: (event: MouseEvent) => void): void
   setMouseUpHandler(handler: (event: MouseEvent) => void): void
   setMouseMoveHandler(handler: (event: MouseEvent) => void): void
-  drawPoint(point: Vector2): void;
+  drawPoint(point: Vector2, name: string): void;
   clearIntersections(): void;
   drawPolygon(polygon: Polygon, fill?: string): void;
   clearPolygons(): void;

@@ -5,45 +5,94 @@ import { Vector2 } from "./vector2";
 
 const CLICK_THRESHOLD = 20;
 
+const enum Modes {
+  Polygon,
+  Line,
+  Survey
+}
+
 export class Polplot {
   lines: Line[] = [];
   intersectionTimes: number[][] = [];
   intersections: Vector2[] = [];
   intersectionIndex: number[][] = [];
   polygons: Polygon[] = [];
+  surveys: Vector2[] = [];
+  mode = Modes.Line;
   constructor(readonly renderer: PolplotRenderer) {
+    // remove next hacky eventListener
+    document.addEventListener('keyup', event => {
+      if (event.key === 's') {
+        this.mode = Modes.Survey;
+      } else if (event.key === 'l') {
+        this.mode = Modes.Line;
+      }
+    });
     let draggedLineIndex = -1;
     let draggedVector2: Vector2;
+    let draggedSurveyIndex = -1;
     this.renderer.setMouseDownHandler(event => {
+      // return if click is not from mouse left button
+      if (event.button) {
+        return;
+      }
       const mouse = new Vector2(event.clientX, event.clientY);
-      draggedLineIndex = this.nearestLineIndexFrom(mouse, CLICK_THRESHOLD);
-      if (draggedLineIndex === -1) {
-        this.addLine(new Line(mouse.x, mouse.y, mouse.x, mouse.y));
-        draggedLineIndex = this.lines.length - 1;
-        draggedVector2 = this.lines[draggedLineIndex].v2;
-      } else if (mouse.sub(this.lines[draggedLineIndex].v1).len() < CLICK_THRESHOLD) {
-        draggedVector2 = this.lines[draggedLineIndex].v1;
-      } else if (mouse.sub(this.lines[draggedLineIndex].v2).len() < CLICK_THRESHOLD) {
-        draggedVector2 = this.lines[draggedLineIndex].v2;
+      if (this.mode === Modes.Line) {
+        draggedLineIndex = this.nearestLineIndexFrom(mouse, CLICK_THRESHOLD);
+        if (draggedLineIndex === -1) {
+          this.addLine(new Line(mouse.x, mouse.y, mouse.x, mouse.y));
+          draggedLineIndex = this.lines.length - 1;
+          draggedVector2 = this.lines[draggedLineIndex].v2;
+        } else if (mouse.sub(this.lines[draggedLineIndex].v1).len() < CLICK_THRESHOLD) {
+          draggedVector2 = this.lines[draggedLineIndex].v1;
+        } else if (mouse.sub(this.lines[draggedLineIndex].v2).len() < CLICK_THRESHOLD) {
+          draggedVector2 = this.lines[draggedLineIndex].v2;
+        }
+      } else if (this.mode === Modes.Survey) {
+        draggedSurveyIndex = this.nearestSurveyIndexFrom(mouse, CLICK_THRESHOLD);
+        if (draggedSurveyIndex === -1) {
+          this.addSurvey(mouse);
+          draggedSurveyIndex = this.surveys.length - 1;
+        }
       }
     });
 
     this.renderer.setMouseUpHandler(event => {
-      draggedLineIndex = -1;
-      draggedVector2 = null;
+      // return if click is not from mouse left button
+      if (event.button) {
+        return;
+      }
+      if (this.mode === Modes.Line) {
+        draggedLineIndex = -1;
+        draggedVector2 = null;
+      } else if (this.mode === Modes.Survey) {
+        draggedSurveyIndex = -1;
+      }
     });
 
     let polygonContainer: Polygon;
     this.renderer.setMouseMoveHandler(event => {
-      if (draggedVector2) {
-        draggedVector2.x += event.movementX;
-        draggedVector2.y += event.movementY;
-        this.updateIntersectionTimes(this.lines[draggedLineIndex]);
-        this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
-      } else if (draggedLineIndex !== -1) {
-        this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
-        this.updateIntersectionTimes(this.lines[draggedLineIndex]);
-        this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
+      // return if click is not from mouse left button
+      if (event.button) {
+        return;
+      }
+      if (this.mode === Modes.Line) {
+        if (draggedVector2) {
+          draggedVector2.x += event.movementX;
+          draggedVector2.y += event.movementY;
+          this.updateIntersectionTimes(this.lines[draggedLineIndex]);
+          this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
+        } else if (draggedLineIndex !== -1) {
+          this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
+          this.updateIntersectionTimes(this.lines[draggedLineIndex]);
+          this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
+        }
+      } else if (this.mode === Modes.Survey) {
+        if (draggedSurveyIndex !== -1) {
+          this.surveys[draggedSurveyIndex].x += event.movementX;
+          this.surveys[draggedSurveyIndex].y += event.movementY;
+          this.updateSurvey(this.surveys[draggedSurveyIndex]);
+        }
       }
       // TODO: should be in a function
       const mouse = new Vector2(event.clientX, event.clientY);
@@ -79,6 +128,41 @@ export class Polplot {
       }
     }
     return nearestLineIndex;
+  }
+  nearestSurveyIndexFrom(v: Vector2, threshold = +Infinity): number {
+    let nearestSurveyIndex = -1;
+    let nearestDist = +Infinity;
+    let dist: number;
+    for (let i = 0; i < this.surveys.length; i++) {
+      dist = this.surveys[i].sub(v).len();
+      if (dist < threshold && dist < nearestDist) {
+        nearestDist = dist;
+        nearestSurveyIndex = i;
+      }
+    }
+    return nearestSurveyIndex;
+  }
+  addSurvey(survey: Vector2): void {
+    this.surveys.push(survey);
+    let container: Polygon;
+    for (const polygon of this.polygons) {
+      if (polygon.contains(survey)) {
+        container = polygon;
+        break;
+      }
+    }
+    this.renderer.drawPoint(survey, container ? container.area().toFixed() + ' m2' : '');
+  }
+  // TODO: cleanup add update render and other weird functions
+  updateSurvey(survey: Vector2): void {
+    let container: Polygon;
+    for (const polygon of this.polygons) {
+      if (polygon.contains(survey)) {
+        container = polygon;
+        break;
+      }
+    }
+    this.renderer.drawPoint(survey, container ? container.area().toFixed() + ' m2' : '');
   }
   addLine(line: Line): void {
     this.addIntersectionTimes(line);
@@ -148,6 +232,7 @@ export class Polplot {
         this.renderer.drawPolygon(polygon, 'white');
       }
     });
+    this.surveys.forEach(survey => this.updateSurvey(survey));
   }
   testSide(u: Vector2, v: Vector2, w: Vector2): boolean {
     return v.sub(u).cross(w.sub(u)) > 0;
