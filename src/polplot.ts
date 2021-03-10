@@ -306,20 +306,3 @@ export class Polplot {
     return polygonIndexes;
   }
 }
-
-// const lines: Line[] = [];
-// const iTimes: number[][] = [];
-// const iPoints: Vector2[][] = [];
-// [
-//   [300, 300, 600, 600],
-//   [300, 600, 600, 300],
-//   [400, 300, 300, 400],
-//   [500, 600, 600, 400],
-//   [300, 500, 400, 600],
-//   [500, 600, 600, 400],
-// ].forEach(([x1, y1, x2, y2]) => {
-//   this.addIntersectionTimes(l1, lines, iTimes, iPoints);
-//   lines.push(l1);
-// });
-// const partials = this.buildPartialsFromIntersectionTimes(lines, iTimes);
-// console.log(partials);
