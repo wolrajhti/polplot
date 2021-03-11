@@ -1,6 +1,7 @@
 import { PolplotRenderer } from "./interfaces/polplot-renderer";
 import { Line } from "./line";
 import { Polygon } from "./polygon";
+import { Survey } from "./survey";
 import { Vector2 } from "./vector2";
 
 // line
@@ -14,9 +15,9 @@ lineTemplate.setAttribute('stroke-dasharray', '10, 4, 1, 4');
 const anchorTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 anchorTemplate.setAttribute(
   'd',
-  'M 0, 0' +
-  'A 10, 10, 0, 0, 0, -5, -5' + 
-  'A 10, 10, 0, 1, 1, 5, -5' +
+  'M 0, 0 ' +
+  'A 10, 10, 0, 0, 0, -5, -5 ' +
+  'A 10, 10, 0, 1, 1, 5, -5 ' +
   'A 10, 10, 0, 0, 0, 0, 0'
 );
 anchorTemplate.setAttribute('fill', 'white');
@@ -62,19 +63,76 @@ polygonTemplate.setAttribute('fill-opacity', '0.7');
 polygonTemplate.setAttribute('stroke-width', '0.8');
 polygonTemplate.setAttribute('stroke', 'black');
 
+// survey
+const gSurveyTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+gSurveyTemplate.setAttribute('transform', 'translate(600, 300)');
+
+const surveyBottomPolygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+surveyBottomPolygonTemplate.setAttribute('fill', 'url(#earth-hatch)');
+surveyBottomPolygonTemplate.setAttribute('stroke-width', '0');
+
+const surveyTopPolygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+surveyTopPolygonTemplate.setAttribute('fill-opacity', '0');
+surveyTopPolygonTemplate.setAttribute('stroke', 'black');
+surveyTopPolygonTemplate.setAttribute('stroke-width', '0.8px');
+
+gSurveyTemplate.appendChild(surveyBottomPolygonTemplate);
+gSurveyTemplate.appendChild(surveyTopPolygonTemplate);
+
+// earthHatch
+const hatchPattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+hatchPattern.id = 'earth-hatch';
+hatchPattern.setAttribute('patternUnits', 'userSpaceOnUse');
+hatchPattern.setAttribute('width', '25');
+hatchPattern.setAttribute('height', '25');
+hatchPattern.setAttribute('stroke', '#222d32');
+hatchPattern.setAttribute('stroke-width', '0.4px');
+
+let hatchPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+const hatchDs = [
+  'M-1,1 l2,-2',
+  'M-1,9 l10,-10',
+
+  'M-1,18 l4,-4',
+  'M-1,26 l8,-8',
+  // 'M6,26 l4,-4',
+  'M7,26 l4,-4',
+
+  // 'M15,26 l10,-10',
+  'M16,26 l10,-10',
+  // 'M23,26 l2,-2',
+  'M24,26 l2,-2',
+
+  'M14,3 l4,-4',
+  'M18,7 l8,-8',
+  'M22,11 l4,-4',
+
+  'M2,11 l13,13',
+  'M6,7 l13,13',
+  'M10,3 l13,13',
+];
+for (const d of hatchDs) {
+  hatchPath.setAttribute('d', d);
+  hatchPattern.appendChild(hatchPath);
+  hatchPath = hatchPath.cloneNode() as SVGPathElement
+}
+
 export class SvgRenderer implements PolplotRenderer {
   readonly svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   private pointContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private polygonContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private lineContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  private surveyContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private svgGByLine = new Map<Line, SVGGElement>();
   private svgPathByPolygon = new Map<Polygon, SVGPathElement>();
   private svgGByPoint = new Map<Vector2, SVGGElement>();
   private handlers: Record<string, (event: MouseEvent) => void> = {};
   constructor() {
+    this.svg.appendChild(hatchPattern);
     this.svg.appendChild(this.polygonContainer);
     this.svg.appendChild(this.lineContainer);
     this.svg.appendChild(this.pointContainer);
+    this.svg.appendChild(this.surveyContainer);
   }
   private _setEventHandler(event: string, handler: (event: MouseEvent) => void): void {
     if (this.handlers[event]) {
@@ -161,10 +219,39 @@ export class SvgRenderer implements PolplotRenderer {
     } else {
       svgPath = this.svgPathByPolygon.get(polygon);
     }
-    svgPath.setAttribute('d', 'M ' + polygon.vertices.map(v => `${v.x.toFixed()} ${v.y.toFixed()}`).join(' L ') + 'Z');
+    svgPath.setAttribute('d', 'M ' + polygon.vertices.map(v => `${v.x.toFixed()} ${v.y.toFixed()}`).join(' L ') + ' Z');
     svgPath.setAttribute('fill', fill);
   }
   clearPolygons(): void {
     this.clearContainer(this.polygonContainer);
+  }
+
+  drawSurvey(survey: Survey): void {
+    const WIDTH = 200;
+    const THICKNESS = 10;
+    const DIAMETER = 50;
+    const d = `M ${(-WIDTH / 2).toFixed()}, 0 ` +
+      `h ${((WIDTH - DIAMETER) / 2).toFixed()} ` +
+      `v ${survey.depth.toFixed()} ` +
+      `h ${DIAMETER.toFixed()} ` +
+      `v ${-survey.depth.toFixed()} ` +
+      `h ${((WIDTH - DIAMETER) / 2).toFixed()}`;
+    const dBottom = d + ' ' +
+      `v ${THICKNESS.toFixed()} ` +
+      `h ${(THICKNESS - (WIDTH - DIAMETER) / 2).toFixed()} ` +
+      `v ${survey.depth.toFixed()} ` +
+      `h ${(-(2 * THICKNESS + DIAMETER)).toFixed()} ` +
+      `v ${-survey.depth.toFixed()} ` +
+      `h ${(THICKNESS - (WIDTH - DIAMETER) / 2).toFixed()} Z`;
+
+    const svgG = gSurveyTemplate.cloneNode(true) as SVGGElement;
+    const bottomPolygon = svgG.children[0] as SVGPathElement;
+    const topPolygon = svgG.children[1] as SVGPathElement;
+    bottomPolygon.setAttribute('d', dBottom);
+    topPolygon.setAttribute('d', d);
+    this.surveyContainer.appendChild(svgG);
+  }
+  clearSurvey(): void {
+    this.clearContainer(this.surveyContainer);
   }
 }

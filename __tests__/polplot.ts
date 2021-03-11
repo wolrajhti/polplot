@@ -1,6 +1,7 @@
 import { PolplotRenderer } from '../src/interfaces/polplot-renderer';
 import { Polplot } from '../src/polplot';
 import { Polygon } from '../src/polygon';
+import { Survey } from '../src/survey';
 import { Vector2 } from '../src/vector2';
 
 class FakeRenderer implements PolplotRenderer {
@@ -13,6 +14,8 @@ class FakeRenderer implements PolplotRenderer {
   setMouseDownHandler(): void { }
   setMouseUpHandler(): void { }
   setMouseMoveHandler(): void { }
+  drawSurvey(survey: Survey): void { }
+  clearSurvey(): void { }
 }
 
 describe('PolPlot', () => {

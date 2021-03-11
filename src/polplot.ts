@@ -1,6 +1,7 @@
 import { PolplotRenderer } from "./interfaces/polplot-renderer";
 import { Line } from "./line";
 import { Polygon } from "./polygon";
+import { Survey } from "./survey";
 import { Vector2 } from "./vector2";
 
 const CLICK_THRESHOLD = 20;
@@ -66,6 +67,10 @@ export class Polplot {
         draggedLineIndex = -1;
         draggedVector2 = null;
       } else if (this.mode === Modes.Survey) {
+        this.renderer.clearSurvey();
+        if (draggedSurveyIndex !== -1) {
+          this.renderer.drawSurvey(new Survey(this.surveys[draggedSurveyIndex], 0, 400 * Math.random(), []));
+        }
         draggedSurveyIndex = -1;
       }
     });

@@ -1,5 +1,6 @@
 import { Line } from "../line";
 import { Polygon } from "../polygon";
+import { Survey } from "../survey";
 import { Vector2 } from "../vector2";
 
 export interface PolplotRenderer {
@@ -12,4 +13,6 @@ export interface PolplotRenderer {
   clearIntersections(): void;
   drawPolygon(polygon: Polygon, fill?: string): void;
   clearPolygons(): void;
+  drawSurvey(survey: Survey): void;
+  clearSurvey(): void;
 }
