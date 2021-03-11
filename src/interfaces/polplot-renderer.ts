@@ -18,4 +18,6 @@ export interface PolplotRenderer {
   clearPolygons(): void;
   drawSurvey(survey: Survey): void;
   clearSurvey(): void;
+  lithoChangeHandler(): void;
+  drawQuantities(quantities: Map<string, number>): void;
 }

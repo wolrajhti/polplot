@@ -60,7 +60,8 @@ gPointTemplate.appendChild(textPointTemplate);
 const polygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 polygonTemplate.setAttribute('fill', 'green');
 polygonTemplate.setAttribute('fill-opacity', '0.7');
-polygonTemplate.setAttribute('stroke-width', '0.8');
+polygonTemplate.setAttribute('stroke-width', '0.8px');
+polygonTemplate.setAttribute('stroke-dasharray', '5, 2');
 polygonTemplate.setAttribute('stroke', 'black');
 
 // survey
@@ -134,11 +135,27 @@ const values = [
   'argile',
   'calcaire'
 ];
+const colors = new Map([
+  [values[0], '#fde312'],
+  [values[1], '#289fde'],
+  [values[2], '#abfe12']
+]);
+
 for (const value of values) {
   optionTemplate.innerHTML = value;
+  optionTemplate.setAttribute('value', value);
   selectTemplate.appendChild(optionTemplate);
   optionTemplate = optionTemplate.cloneNode() as HTMLOptionElement;
 }
+
+// quantity
+const pTemplate = document.createElement('p');
+pTemplate.style.borderLeftWidth = '14px';
+pTemplate.style.fontFamily = 'consolas, "Liberation Mono", courier, monospace';
+pTemplate.style.fontWeight = '100';
+pTemplate.style.fontSize = '14px';
+pTemplate.style.height = '14px';
+pTemplate.style.paddingLeft = '8px';
 
 export class SvgRenderer implements PolplotRenderer {
   private svg: SVGElement;
@@ -149,10 +166,12 @@ export class SvgRenderer implements PolplotRenderer {
   private polygonContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private lineContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private surveyContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  private quantitiesContainer: HTMLDivElement;
   private svgGByLine = new Map<Line, SVGGElement>();
   private svgPathByPolygon = new Map<Polygon, SVGPathElement>();
   private svgGByPoint = new Map<Vector2, SVGGElement>();
   private handlers: Record<string, (event: MouseEvent) => void> = {};
+  public lithoChangeHandler: () => void;
   constructor() {
     this.svg = document.querySelector('.content');
     this.sidebarDiv = document.querySelector('.sidebar');
@@ -161,6 +180,7 @@ export class SvgRenderer implements PolplotRenderer {
     this.svg.appendChild(this.polygonContainer);
     this.svg.appendChild(this.lineContainer);
     this.svg.appendChild(this.pointContainer);
+    this.quantitiesContainer = document.querySelector('.quantities.container');
     this.sidebarSvg.appendChild(this.surveyContainer);
     this.sidebarDiv.appendChild(this.selectContainer);
   }
@@ -299,10 +319,16 @@ export class SvgRenderer implements PolplotRenderer {
       lithologicalLayer.setAttribute('y', top.toFixed());
       lithologicalLayer.setAttribute('width', DIAMETER.toFixed());
       lithologicalLayer.setAttribute('height', survey.lithology[i].depth.toFixed());
-      lithologicalLayer.setAttribute('fill', '#' + (Math.floor((16777215 - 1e5) * Math.random()) + 1e5).toString(16));
+      lithologicalLayer.setAttribute('fill', colors.get(survey.lithology[i].type));
       lithology.appendChild(lithologicalLayer);
 
       const select = selectTemplate.cloneNode(true) as HTMLSelectElement;
+      select.querySelector(`option[value="${survey.lithology[i].type}"]`).setAttribute('selected', 'selected');
+      select.addEventListener('change', event => {
+        survey.lithology[i].type = select.value;
+        lithologicalLayer.setAttribute('fill', colors.get(select.value));
+        this.lithoChangeHandler();
+      });
       select.style.top = (top + 100 + survey.lithology[i].depth / 2).toFixed() + 'px';
 
       this.selectContainer.appendChild(select);
@@ -317,5 +343,14 @@ export class SvgRenderer implements PolplotRenderer {
     this.sidebarDiv.classList.remove('visible');
     this.clearContainer(this.surveyContainer);
     this.clearContainer(this.selectContainer);
+  }
+  drawQuantities(quantities: Map<string, number>): void {
+    this.clearContainer(this.quantitiesContainer);
+    quantities.forEach((quantity, type) => {
+      const p = pTemplate.cloneNode() as HTMLParagraphElement;
+      p.innerHTML = `${type} (${(quantity / (10 * 10 * 50)).toFixed(2)} m³)`;
+      p.style.borderLeft = `8px solid ${colors.get(type)}`;
+      this.quantitiesContainer.appendChild(p);
+    });
   }
 }

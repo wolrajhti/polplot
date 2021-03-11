@@ -19,7 +19,8 @@ export class Polplot {
   intersections: Vector2[] = [];
   intersectionIndex: number[][] = [];
   polygons: Polygon[] = [];
-  surveys: Vector2[] = [];
+  surveys: Survey[] = [];
+  quantities = new Map<string, number>();
   mode = Modes.Line;
   constructor(readonly renderer: PolplotRenderer) {
     // remove next hacky eventListener
@@ -74,11 +75,7 @@ export class Polplot {
         draggedVector2 = null;
       } else if (this.mode === Modes.Survey) {
         if (draggedSurveyIndex !== -1) {
-          activeSurvey = new Survey([
-            new LithologicalLayer('non identifié', 50 + 100 * Math.random()),
-            new LithologicalLayer('non identifié', 50 + 100 * Math.random()),
-            new LithologicalLayer('non identifié', 50 + 100 * Math.random()),
-          ]);
+          activeSurvey = this.surveys[draggedSurveyIndex];
           this.renderer.drawSurvey(activeSurvey);
         } else {
           activeSurvey = null;
@@ -106,8 +103,8 @@ export class Polplot {
         }
       } else if (this.mode === Modes.Survey) {
         if (draggedSurveyIndex !== -1) {
-          this.surveys[draggedSurveyIndex].x += event.movementX;
-          this.surveys[draggedSurveyIndex].y += event.movementY;
+          this.surveys[draggedSurveyIndex].coordinates.x += event.movementX;
+          this.surveys[draggedSurveyIndex].coordinates.y += event.movementY;
           this.updateSurvey(this.surveys[draggedSurveyIndex]);
         }
       }
@@ -141,8 +138,6 @@ export class Polplot {
       }
       if (activeSurvey) {
         const mouse = new Vector2(event.offsetX, event.offsetY);
-        console.log('---------------------');
-        console.log(event.offsetX, event.offsetY);
         const offset = new Vector2(300, 100);
         for (const lithologicalLayer of activeSurvey.lithology) {
           const polygon = new Polygon([
@@ -151,7 +146,6 @@ export class Polplot {
             offset.add(new Vector2(25, lithologicalLayer.depth)),
             offset.add(new Vector2(-25, lithologicalLayer.depth)),
           ]);
-          console.log(polygon.toString());
           offset.y += lithologicalLayer.depth;
           if (polygon.contains(mouse)) {
             draggedLithologyLayer = lithologicalLayer;
@@ -175,8 +169,13 @@ export class Polplot {
       if (draggedLithologyLayer) {
         draggedLithologyLayer.depth += event.movementY;
         this.renderer.drawSurvey(activeSurvey);
+        this.updateQuantities();
       }
     });
+
+    this.renderer.lithoChangeHandler = () => {
+      this.updateQuantities();
+    };
   }
   nearestLineIndexFrom(v: Vector2, threshold = +Infinity): number {
     let nearestLineIndex = -1;
@@ -196,7 +195,7 @@ export class Polplot {
     let nearestDist = +Infinity;
     let dist: number;
     for (let i = 0; i < this.surveys.length; i++) {
-      dist = this.surveys[i].sub(v).len();
+      dist = this.surveys[i].coordinates.sub(v).len();
       if (dist < threshold && dist < nearestDist) {
         nearestDist = dist;
         nearestSurveyIndex = i;
@@ -204,27 +203,43 @@ export class Polplot {
     }
     return nearestSurveyIndex;
   }
-  addSurvey(survey: Vector2): void {
-    this.surveys.push(survey);
+  addSurvey(coordinates: Vector2): void {
     let container: Polygon;
     for (const polygon of this.polygons) {
-      if (polygon.contains(survey)) {
+      if (polygon.contains(coordinates)) {
         container = polygon;
         break;
       }
     }
-    this.renderer.drawPoint(survey, container ? container.area().toFixed() + ' m2' : '');
+    const survey = new Survey(coordinates, [
+      new LithologicalLayer('non identifié', 50),
+      new LithologicalLayer('non identifié', 50),
+      new LithologicalLayer('non identifié', 50),
+    ], container);
+    this.surveys.push(survey);
+    this.renderer.drawPoint(coordinates, container ? (container.area() / (10 * 10)).toFixed(2) + ' m2' : '');
+    this.updateQuantities();
   }
   // TODO: cleanup add update render and other weird functions
-  updateSurvey(survey: Vector2): void {
-    let container: Polygon;
+  updateSurvey(survey: Survey): void {
+    survey.polygon = null;
     for (const polygon of this.polygons) {
-      if (polygon.contains(survey)) {
-        container = polygon;
+      if (polygon.contains(survey.coordinates)) {
+        survey.polygon = polygon;
         break;
       }
     }
-    this.renderer.drawPoint(survey, container ? container.area().toFixed() + ' m2' : '');
+    this.renderer.drawPoint(survey.coordinates, survey.polygon ? (survey.polygon.area() / (10 * 10)).toFixed(2) + ' m2' : '');
+    this.updateQuantities();
+  }
+  updateQuantities(): void {
+    this.quantities.clear();
+    this.surveys.forEach(survey => {
+      survey.quantities().forEach((quantity, type) => {
+        this.quantities.set(type, (this.quantities.get(type) || 0) + quantity);
+      });
+    });
+    this.renderer.drawQuantities(this.quantities);
   }
   addLine(line: Line): void {
     this.addIntersectionTimes(line);

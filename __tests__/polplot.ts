@@ -19,6 +19,8 @@ class FakeRenderer implements PolplotRenderer {
   setSidebarMouseMoveHandler(): void { }
   drawSurvey(survey: Survey): void { }
   clearSurvey(): void { }
+  lithoChangeHandler(): void { }
+  drawQuantities(quantities: Map<string, number>): void { }
 }
 
 describe('PolPlot', () => {
