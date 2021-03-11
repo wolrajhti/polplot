@@ -65,7 +65,7 @@ polygonTemplate.setAttribute('stroke', 'black');
 
 // survey
 const gSurveyTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-gSurveyTemplate.setAttribute('transform', 'translate(600, 300)');
+gSurveyTemplate.setAttribute('transform', 'translate(300, 100)');
 
 const surveyBottomPolygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 surveyBottomPolygonTemplate.setAttribute('fill', 'url(#earth-hatch)');
@@ -76,8 +76,14 @@ surveyTopPolygonTemplate.setAttribute('fill-opacity', '0');
 surveyTopPolygonTemplate.setAttribute('stroke', 'black');
 surveyTopPolygonTemplate.setAttribute('stroke-width', '0.8px');
 
+const surveyLithologyTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+gSurveyTemplate.appendChild(surveyLithologyTemplate);
 gSurveyTemplate.appendChild(surveyBottomPolygonTemplate);
 gSurveyTemplate.appendChild(surveyTopPolygonTemplate);
+
+// lithologicalLayer
+const lithologicalLayerRectTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
 
 // earthHatch
 const hatchPattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
@@ -117,8 +123,28 @@ for (const d of hatchDs) {
   hatchPath = hatchPath.cloneNode() as SVGPathElement
 }
 
+// type select
+const selectTemplate = document.createElement('select');
+selectTemplate.style.position = 'absolute';
+selectTemplate.style.transform = 'translateY(-49%)';
+selectTemplate.style.left = '24px';
+let optionTemplate = document.createElement('option');
+const values = [
+  'non identifié',
+  'argile',
+  'calcaire'
+];
+for (const value of values) {
+  optionTemplate.innerHTML = value;
+  selectTemplate.appendChild(optionTemplate);
+  optionTemplate = optionTemplate.cloneNode() as HTMLOptionElement;
+}
+
 export class SvgRenderer implements PolplotRenderer {
-  readonly svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  private svg: SVGElement;
+  private sidebarDiv: HTMLDivElement;
+  private sidebarSvg: SVGElement;
+  private selectContainer = document.createElement('div');
   private pointContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private polygonContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   private lineContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -128,27 +154,40 @@ export class SvgRenderer implements PolplotRenderer {
   private svgGByPoint = new Map<Vector2, SVGGElement>();
   private handlers: Record<string, (event: MouseEvent) => void> = {};
   constructor() {
+    this.svg = document.querySelector('.content');
+    this.sidebarDiv = document.querySelector('.sidebar');
+    this.sidebarSvg = document.querySelector('.sidebar > svg');
     this.svg.appendChild(hatchPattern);
     this.svg.appendChild(this.polygonContainer);
     this.svg.appendChild(this.lineContainer);
     this.svg.appendChild(this.pointContainer);
-    this.svg.appendChild(this.surveyContainer);
+    this.sidebarSvg.appendChild(this.surveyContainer);
+    this.sidebarDiv.appendChild(this.selectContainer);
   }
-  private _setEventHandler(event: string, handler: (event: MouseEvent) => void): void {
+  private _setEventHandler(svg: SVGElement, event: string, handler: (event: MouseEvent) => void): void {
     if (this.handlers[event]) {
-      this.svg.removeEventListener(event, this.handlers[event]);
+      svg.removeEventListener(event, this.handlers[event]);
     }
     this.handlers[event] = handler;
-    this.svg.addEventListener(event, this.handlers[event]);
+    svg.addEventListener(event, this.handlers[event]);
   }
   setMouseDownHandler(handler: (event: MouseEvent) => void): void {
-    this._setEventHandler('mousedown', handler);
+    this._setEventHandler(this.svg, 'mousedown', handler);
   }
   setMouseUpHandler(handler: (event: MouseEvent) => void): void {
-    this._setEventHandler('mouseup', handler);
+    this._setEventHandler(this.svg, 'mouseup', handler);
   }
   setMouseMoveHandler(handler: (event: MouseEvent) => void): void {
-    this._setEventHandler('mousemove', handler);
+    this._setEventHandler(this.svg, 'mousemove', handler);
+  }
+  setSidebarMouseDownHandler(handler: (event: MouseEvent) => void): void {
+    this._setEventHandler(this.sidebarSvg, 'mousedown', handler);
+  }
+  setSidebarMouseUpHandler(handler: (event: MouseEvent) => void): void {
+    this._setEventHandler(this.sidebarSvg, 'mouseup', handler);
+  }
+  setSidebarMouseMoveHandler(handler: (event: MouseEvent) => void): void {
+    this._setEventHandler(this.sidebarSvg, 'mousemove', handler);
   }
   drawLine(line: Line, name: string): void {
     let svgG: SVGGElement;
@@ -202,7 +241,7 @@ export class SvgRenderer implements PolplotRenderer {
     svgG.setAttribute('transform', `translate(${point.x.toFixed()}, ${point.y.toFixed()})`);
     svgText.innerHTML = name;
   }
-  private clearContainer(container: SVGGElement): void {
+  private clearContainer(container: Element): void {
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
@@ -227,31 +266,56 @@ export class SvgRenderer implements PolplotRenderer {
   }
 
   drawSurvey(survey: Survey): void {
+    this.clearContainer(this.surveyContainer);
+    this.clearContainer(this.selectContainer);
     const WIDTH = 200;
     const THICKNESS = 10;
     const DIAMETER = 50;
     const d = `M ${(-WIDTH / 2).toFixed()}, 0 ` +
       `h ${((WIDTH - DIAMETER) / 2).toFixed()} ` +
-      `v ${survey.depth.toFixed()} ` +
+      `v ${survey.depth().toFixed()} ` +
       `h ${DIAMETER.toFixed()} ` +
-      `v ${-survey.depth.toFixed()} ` +
+      `v ${-survey.depth().toFixed()} ` +
       `h ${((WIDTH - DIAMETER) / 2).toFixed()}`;
     const dBottom = d + ' ' +
       `v ${THICKNESS.toFixed()} ` +
       `h ${(THICKNESS - (WIDTH - DIAMETER) / 2).toFixed()} ` +
-      `v ${survey.depth.toFixed()} ` +
+      `v ${survey.depth().toFixed()} ` +
       `h ${(-(2 * THICKNESS + DIAMETER)).toFixed()} ` +
-      `v ${-survey.depth.toFixed()} ` +
+      `v ${-survey.depth().toFixed()} ` +
       `h ${(THICKNESS - (WIDTH - DIAMETER) / 2).toFixed()} Z`;
 
     const svgG = gSurveyTemplate.cloneNode(true) as SVGGElement;
-    const bottomPolygon = svgG.children[0] as SVGPathElement;
-    const topPolygon = svgG.children[1] as SVGPathElement;
+    const lithology = svgG.children[0] as SVGGElement;
+    const bottomPolygon = svgG.children[1] as SVGPathElement;
+    const topPolygon = svgG.children[2] as SVGPathElement;
     bottomPolygon.setAttribute('d', dBottom);
     topPolygon.setAttribute('d', d);
+
+    let top = 0;
+    for (let i = 0; i < survey.lithology.length; i++) {
+      const lithologicalLayer = lithologicalLayerRectTemplate.cloneNode() as SVGRectElement;
+      lithologicalLayer.setAttribute('x', (-DIAMETER / 2).toFixed());
+      lithologicalLayer.setAttribute('y', top.toFixed());
+      lithologicalLayer.setAttribute('width', DIAMETER.toFixed());
+      lithologicalLayer.setAttribute('height', survey.lithology[i].depth.toFixed());
+      lithologicalLayer.setAttribute('fill', '#' + (Math.floor((16777215 - 1e5) * Math.random()) + 1e5).toString(16));
+      lithology.appendChild(lithologicalLayer);
+
+      const select = selectTemplate.cloneNode(true) as HTMLSelectElement;
+      select.style.top = (top + 100 + survey.lithology[i].depth / 2).toFixed() + 'px';
+
+      this.selectContainer.appendChild(select);
+
+      top += survey.lithology[i].depth;
+    }
+
     this.surveyContainer.appendChild(svgG);
+    this.sidebarDiv.classList.add('visible');
   }
   clearSurvey(): void {
+    this.sidebarDiv.classList.remove('visible');
     this.clearContainer(this.surveyContainer);
+    this.clearContainer(this.selectContainer);
   }
 }

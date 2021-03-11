@@ -14,6 +14,9 @@ class FakeRenderer implements PolplotRenderer {
   setMouseDownHandler(): void { }
   setMouseUpHandler(): void { }
   setMouseMoveHandler(): void { }
+  setSidebarMouseDownHandler(): void { }
+  setSidebarMouseUpHandler(): void { }
+  setSidebarMouseMoveHandler(): void { }
   drawSurvey(survey: Survey): void { }
   clearSurvey(): void { }
 }

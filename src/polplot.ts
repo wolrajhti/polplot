@@ -1,5 +1,6 @@
 import { PolplotRenderer } from "./interfaces/polplot-renderer";
 import { Line } from "./line";
+import { LithologicalLayer } from "./lithological-layer";
 import { Polygon } from "./polygon";
 import { Survey } from "./survey";
 import { Vector2 } from "./vector2";
@@ -27,8 +28,12 @@ export class Polplot {
         this.mode = Modes.Survey;
       } else if (event.key === 'l') {
         this.mode = Modes.Line;
+        this.renderer.clearSurvey();
+      } else if (event.key === 'Escape') {
+        this.renderer.clearSurvey();
       }
     });
+
     let draggedLineIndex = -1;
     let draggedVector2: Vector2;
     let draggedSurveyIndex = -1;
@@ -58,6 +63,7 @@ export class Polplot {
       }
     });
 
+    let activeSurvey: Survey;
     this.renderer.setMouseUpHandler(event => {
       // return if click is not from mouse left button
       if (event.button) {
@@ -67,9 +73,15 @@ export class Polplot {
         draggedLineIndex = -1;
         draggedVector2 = null;
       } else if (this.mode === Modes.Survey) {
-        this.renderer.clearSurvey();
         if (draggedSurveyIndex !== -1) {
-          this.renderer.drawSurvey(new Survey(this.surveys[draggedSurveyIndex], 0, 400 * Math.random(), []));
+          activeSurvey = new Survey([
+            new LithologicalLayer('non identifié', 50 + 100 * Math.random()),
+            new LithologicalLayer('non identifié', 50 + 100 * Math.random()),
+            new LithologicalLayer('non identifié', 50 + 100 * Math.random()),
+          ]);
+          this.renderer.drawSurvey(activeSurvey);
+        } else {
+          activeSurvey = null;
         }
         draggedSurveyIndex = -1;
       }
@@ -118,6 +130,51 @@ export class Polplot {
       }
       if (oldPolygonContainer && oldPolygonContainer !== polygonContainer) {
         this.renderer.drawPolygon(oldPolygonContainer, 'white');
+      }
+    });
+
+
+    let draggedLithologyLayer: LithologicalLayer;
+    this.renderer.setSidebarMouseDownHandler(event => {
+      if (event.button) {
+        return;
+      }
+      if (activeSurvey) {
+        const mouse = new Vector2(event.offsetX, event.offsetY);
+        console.log('---------------------');
+        console.log(event.offsetX, event.offsetY);
+        const offset = new Vector2(300, 100);
+        for (const lithologicalLayer of activeSurvey.lithology) {
+          const polygon = new Polygon([
+            offset.add(new Vector2(-25, 0)),
+            offset.add(new Vector2(25, 0)),
+            offset.add(new Vector2(25, lithologicalLayer.depth)),
+            offset.add(new Vector2(-25, lithologicalLayer.depth)),
+          ]);
+          console.log(polygon.toString());
+          offset.y += lithologicalLayer.depth;
+          if (polygon.contains(mouse)) {
+            draggedLithologyLayer = lithologicalLayer;
+            break;
+          }
+        }
+      }
+    });
+
+    this.renderer.setSidebarMouseUpHandler(event => {
+      if (event.button) {
+        return;
+      }
+      draggedLithologyLayer = null;
+    });
+
+    this.renderer.setSidebarMouseMoveHandler(event => {
+      if (event.button) {
+        return;
+      }
+      if (draggedLithologyLayer) {
+        draggedLithologyLayer.depth += event.movementY;
+        this.renderer.drawSurvey(activeSurvey);
       }
     });
   }

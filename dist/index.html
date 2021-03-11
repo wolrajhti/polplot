@@ -10,11 +10,28 @@
         overflow: hidden
       }
       svg {
-        position: fixed;
-        top:0;
-        left:0;
-        height:100%;
-        width:100%;
+        height: 100vh;
+      }
+      .container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+      .content {
+        flex-grow: 1;
+      }
+      .sidebar {
+        position: relative;
+        box-shadow: -2px 0px 8px #0003;
+        transition: width .4s ease-in-out;
+        width: 25vw;
+      }
+      .sidebar > svg {
+        background-color: #00000003;
+        width: 100%;
+      }
+      .sidebar:not(.visible) {
+        width: 0vw;
       }
       text {
         user-select: none;
@@ -22,6 +39,12 @@
     </style>
   </head>
   <body>
+    <div class="container">
+      <svg class="content"></svg>
+      <div class="sidebar">
+        <svg></svg>
+      </div>
+    </div>
     <script src="./main.js"></script>
   </body>
 </html>
