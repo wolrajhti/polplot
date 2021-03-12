@@ -241,13 +241,9 @@ export class Polplot {
     });
     this.renderer.drawQuantities(this.quantities);
   }
-  addLine(line: Line): void {
-    this.addIntersectionTimes(line);
-    this.lines.push(line);
-    this.renderer.drawLine(line, (this.lines.length - 1).toString());
-  }
-  addIntersectionTimes(
+  addLine(
     line: Line,
+    at = this.lines.length,
     lines = this.lines,
     intersectionTimes = this.intersectionTimes,
     intersections = this.intersections,
@@ -255,20 +251,20 @@ export class Polplot {
   ): void {
     const newIntersectionTimes: number[] = [];
     const newIntersectionIndex: number[] = [];
-    let times: Vector2;
     for (let i = 0; i < lines.length; i++) {
-      times = lines[i].intersectionTimesWith(line);
-      intersectionTimes[i].push(times.x);
-      intersections.push(lines[i].pointAt(times.x));
-      intersectionIndex[i].push(intersections.length - 1);
-      newIntersectionTimes.push(times.y);
+      intersectionTimes[i].splice(at, 0, NaN);
+      intersections.push(new Vector2());
+      intersectionIndex[i].splice(at, 0, intersections.length - 1);
+      newIntersectionTimes.push(NaN);
       newIntersectionIndex.push(intersections.length - 1);
     }
-    newIntersectionTimes.push(NaN);
-    newIntersectionIndex.push(null);
-    intersectionTimes.push(newIntersectionTimes);
-    intersectionIndex.push(newIntersectionIndex);
-    this.renderIntersections();
+    newIntersectionTimes.splice(at, 0, NaN);
+    newIntersectionIndex.splice(at, 0, -1);
+    intersectionTimes.splice(at, 0, newIntersectionTimes);
+    intersectionIndex.splice(at, 0, newIntersectionIndex);
+    this.lines.splice(at, 0, line);
+    this.renderer.drawLine(line, at.toString());
+    this.updateIntersectionTimes(line);
   }
   updateIntersectionTimes(
     line: Line,
