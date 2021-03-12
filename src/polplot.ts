@@ -9,8 +9,8 @@ const CLICK_THRESHOLD = 20;
 
 const enum Modes {
   Contour,
-  Line,
-  Survey
+  Axes,
+  Surveys
 }
 
 export class Polplot {
@@ -27,17 +27,45 @@ export class Polplot {
     // remove next hacky eventListener
     document.addEventListener('keyup', event => {
       if (event.key === 's') {
-        this.mode = Modes.Survey;
+        this.mode = Modes.Surveys;
+        document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+        document.querySelector('#edit-surveys').classList.add('selected');
       } else if (event.key === 'c') {
         this.mode = Modes.Contour;
         this.renderer.clearSurvey();
-      } else if (event.key === 'l') {
-        this.mode = Modes.Line;
+        document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+        document.querySelector('#edit-contour').classList.add('selected');
+      } else if (event.key === 'a') {
+        this.mode = Modes.Axes;
         this.renderer.clearSurvey();
+        document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+        document.querySelector('#edit-axes').classList.add('selected');
       } else if (event.key === 'Escape') {
         this.renderer.clearSurvey();
       }
     });
+
+    document.querySelector('#edit-contour').addEventListener('click', event => {
+      document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+      (event.target as HTMLDivElement).classList.add('selected');
+      this.mode = Modes.Contour;
+      this.renderer.clearSurvey();
+    });
+
+    document.querySelector('#edit-axes').addEventListener('click', event => {
+      document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+      (event.target as HTMLDivElement).classList.add('selected');
+      this.mode = Modes.Axes;
+      this.renderer.clearSurvey();
+    });
+
+    document.querySelector('#edit-surveys').addEventListener('click', event => {
+      document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+      (event.target as HTMLDivElement).classList.add('selected');
+      this.mode = Modes.Surveys;
+    });
+
+    this.updateQuantities();
 
     let draggedLineIndex = -1;
     let draggedVector2: Vector2;
@@ -48,16 +76,16 @@ export class Polplot {
         return;
       }
       const mouse = new Vector2(event.clientX, event.clientY);
-      if (this.mode === Modes.Line || this.mode === Modes.Contour) {
+      if (this.mode === Modes.Axes || this.mode === Modes.Contour) {
         draggedLineIndex = this.nearestLineIndexFrom(
           mouse,
           CLICK_THRESHOLD,
-          this.mode === Modes.Line
+          this.mode === Modes.Axes
             ? this.axes
             : this.contour.edges()
         );
         if (draggedLineIndex === -1) {
-          if (this.mode === Modes.Line) {
+          if (this.mode === Modes.Axes) {
             this.addLine(new Line(mouse.x, mouse.y, mouse.x, mouse.y));
             draggedLineIndex = this.lines.length - 1;
             draggedVector2 = this.lines[draggedLineIndex].v2;
@@ -67,7 +95,7 @@ export class Polplot {
             draggedVector2 = this.lines[draggedLineIndex].v1;
           }
         } else {
-          if (this.mode === Modes.Line) {
+          if (this.mode === Modes.Axes) {
             draggedLineIndex += this.contour.edgeCount();
           }
           if (mouse.sub(this.lines[draggedLineIndex].v1).len() < CLICK_THRESHOLD) {
@@ -76,7 +104,7 @@ export class Polplot {
             draggedVector2 = this.lines[draggedLineIndex].v2;
           }
         }
-      } else if (this.mode === Modes.Survey) {
+      } else if (this.mode === Modes.Surveys) {
         draggedSurveyIndex = this.nearestSurveyIndexFrom(mouse, CLICK_THRESHOLD);
         if (draggedSurveyIndex === -1) {
           this.addSurvey(mouse);
@@ -91,10 +119,10 @@ export class Polplot {
       if (event.button) {
         return;
       }
-      if (this.mode === Modes.Line || this.mode === Modes.Contour) {
+      if (this.mode === Modes.Axes || this.mode === Modes.Contour) {
         draggedLineIndex = -1;
         draggedVector2 = null;
-      } else if (this.mode === Modes.Survey) {
+      } else if (this.mode === Modes.Surveys) {
         if (draggedSurveyIndex !== -1) {
           activeSurvey = this.surveys[draggedSurveyIndex];
           this.renderer.drawSurvey(activeSurvey);
@@ -111,7 +139,7 @@ export class Polplot {
       if (event.button) {
         return;
       }
-      if (this.mode === Modes.Line || this.mode === Modes.Contour) {
+      if (this.mode === Modes.Axes || this.mode === Modes.Contour) {
         if (draggedVector2 || draggedLineIndex !== -1) {
           if (draggedVector2) {
             draggedVector2.x += event.movementX;
@@ -120,7 +148,7 @@ export class Polplot {
             this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
           }
           this.updateIntersectionTimes(draggedLineIndex);
-          if (this.mode === Modes.Line) {
+          if (this.mode === Modes.Axes) {
             this.renderer.drawLine(
               this.axes[draggedLineIndex - this.contour.edgeCount()],
               (draggedLineIndex - this.contour.edgeCount()).toString()
@@ -139,7 +167,7 @@ export class Polplot {
             this.renderer.drawContour(this.contour);
           }
         }
-      } else if (this.mode === Modes.Survey) {
+      } else if (this.mode === Modes.Surveys) {
         if (draggedSurveyIndex !== -1) {
           this.surveys[draggedSurveyIndex].coordinates.x += event.movementX;
           this.surveys[draggedSurveyIndex].coordinates.y += event.movementY;

@@ -187,7 +187,7 @@ export class SvgRenderer implements PolplotRenderer {
     this.svg.appendChild(this.polygonContainer);
     this.svg.appendChild(this.lineContainer);
     this.svg.appendChild(this.pointContainer);
-    this.quantitiesContainer = document.querySelector('.quantities.container');
+    this.quantitiesContainer = document.querySelector('.quantities');
     this.sidebarSvg.appendChild(this.surveyContainer);
     this.sidebarDiv.appendChild(this.selectContainer);
   }
@@ -356,6 +356,11 @@ export class SvgRenderer implements PolplotRenderer {
   }
   drawQuantities(quantities: Map<string, number>): void {
     this.clearContainer(this.quantitiesContainer);
+    const p = pTemplate.cloneNode() as HTMLParagraphElement;
+    p.innerHTML = `Volumes :`;
+    p.style.fontStyle = 'bold';
+    p.style.textDecoration = 'underline';
+    this.quantitiesContainer.appendChild(p);
     quantities.forEach((quantity, type) => {
       const p = pTemplate.cloneNode() as HTMLParagraphElement;
       p.innerHTML = `${type} (${(quantity / (10 * 10 * 50)).toFixed(2)} m³)`;

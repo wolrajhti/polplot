@@ -37,21 +37,61 @@
         user-select: none;
       }
       .quantities {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: white;
+        padding: 8px;
         position: absolute;
-        top: calc(100vh - 100px);
-        left: 5vh;
-        width: 50vw;
+        top: calc(100vh - 200px);
+        left: 8px;
+        border-radius: 4px;
+        box-shadow: 2px 2px 2px #0003;
+        padding: 8px;
+      }
+      .buttons {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .button {
+        user-select: none;
+        background-color: white;
+        margin-bottom: 8px;
+        padding: 8px;
+        text-align: center;
+        border-radius: 4px;
+        box-shadow: 2px 2px 2px #0003;
+        font-family: consolas, "Liberation Mono", courier, monospace;
+        font-weight: 100;
+        font-size: 14px;
+      }
+      .button:hover {
+        background-color: #eee;
+      }
+      .button.selected {
+        background-color: #1CB7A8;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <svg class="content"></svg>
+      <svg class="content">
+        <image transform="translate(-100, -300) scale(1.7)" xlink:href="./background.png"></image>
+      </svg>
       <div class="sidebar">
         <svg></svg>
       </div>
     </div>
-    <div class="container quantities"></div>
+    <div class="quantities"></div>
+    <div class="buttons">
+      <div id="edit-contour" class="button">Editer l'emprise du site</div>
+      <div id="edit-axes" class="button">Editer la grille</div>
+      <div id="edit-surveys" class="button">Editer les sondages</div>
+    </div>
     <script src="./main.js"></script>
   </body>
 </html>
