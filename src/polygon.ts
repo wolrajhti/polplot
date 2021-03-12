@@ -32,6 +32,18 @@ export class Polygon {
   reverse(): void {
     this.vertices.reverse();
   }
+  edgeCount(): number {
+    if (this.vertices.length > 1) {
+      return this.vertices.length;
+    }
+    return 0;
+  }
+  edges(): Line[] {
+    if (this.vertices.length > 1) {
+      return this.vertices.map((v, i) => Line.fromVectors(this.vertices[i], this.vertices[i < this.vertices.length - 1 ? i + 1 : 0]));
+    }
+    return [];
+  }
   toString(): string {
     return `${this.vertices.length} points: ` + this.vertices.map(v => `(${v.x.toFixed()}, ${v.y.toFixed()})`).join(', ') + ` (area: ${this.area().toFixed()})`;
   }

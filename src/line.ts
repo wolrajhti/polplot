@@ -1,6 +1,12 @@
 import { Vector2 } from "./vector2";
 
 export class Line {
+  static fromVectors(v1: Vector2, v2: Vector2): Line {
+    const line = new Line();
+    line.v1 = v1;
+    line.v2 = v2;
+    return line;
+  }
   v1: Vector2;
   v2: Vector2;
   constructor(

@@ -20,4 +20,5 @@ export interface PolplotRenderer {
   clearSurvey(): void;
   lithoChangeHandler(): void;
   drawQuantities(quantities: Map<string, number>): void;
+  drawContour(polygon: Polygon): void;
 }

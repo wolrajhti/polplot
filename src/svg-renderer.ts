@@ -157,6 +157,10 @@ pTemplate.style.fontSize = '14px';
 pTemplate.style.height = '14px';
 pTemplate.style.paddingLeft = '8px';
 
+// contour
+const contourTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+contourTemplate.setAttribute('fill', 'green');
+
 export class SvgRenderer implements PolplotRenderer {
   private svg: SVGElement;
   private sidebarDiv: HTMLDivElement;
@@ -172,10 +176,13 @@ export class SvgRenderer implements PolplotRenderer {
   private svgGByPoint = new Map<Vector2, SVGGElement>();
   private handlers: Record<string, (event: MouseEvent) => void> = {};
   public lithoChangeHandler: () => void;
+  private svgContourPath: SVGPathElement;
   constructor() {
+    this.svgContourPath = contourTemplate.cloneNode() as SVGPathElement;
     this.svg = document.querySelector('.content');
     this.sidebarDiv = document.querySelector('.sidebar');
     this.sidebarSvg = document.querySelector('.sidebar > svg');
+    this.svg.prepend(this.svgContourPath);
     this.svg.appendChild(hatchPattern);
     this.svg.appendChild(this.polygonContainer);
     this.svg.appendChild(this.lineContainer);
@@ -280,6 +287,9 @@ export class SvgRenderer implements PolplotRenderer {
     }
     svgPath.setAttribute('d', 'M ' + polygon.vertices.map(v => `${v.x.toFixed()} ${v.y.toFixed()}`).join(' L ') + ' Z');
     svgPath.setAttribute('fill', fill);
+  }
+  drawContour(polygon: Polygon): void {
+    this.svgContourPath.setAttribute('d', 'M ' + polygon.vertices.map(v => `${v.x.toFixed()} ${v.y.toFixed()}`).join(' L ') + ' Z');
   }
   clearPolygons(): void {
     this.clearContainer(this.polygonContainer);

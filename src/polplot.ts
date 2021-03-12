@@ -8,25 +8,29 @@ import { Vector2 } from "./vector2";
 const CLICK_THRESHOLD = 20;
 
 const enum Modes {
-  Polygon,
+  Contour,
   Line,
   Survey
 }
 
 export class Polplot {
-  lines: Line[] = [];
+  axes: Line[] = [];
+  contour = new Polygon();
   intersectionTimes: number[][] = [];
   intersections: Vector2[] = [];
   intersectionIndex: number[][] = [];
   polygons: Polygon[] = [];
   surveys: Survey[] = [];
   quantities = new Map<string, number>();
-  mode = Modes.Line;
+  mode = Modes.Contour;
   constructor(readonly renderer: PolplotRenderer) {
     // remove next hacky eventListener
     document.addEventListener('keyup', event => {
       if (event.key === 's') {
         this.mode = Modes.Survey;
+      } else if (event.key === 'c') {
+        this.mode = Modes.Contour;
+        this.renderer.clearSurvey();
       } else if (event.key === 'l') {
         this.mode = Modes.Line;
         this.renderer.clearSurvey();
@@ -44,16 +48,33 @@ export class Polplot {
         return;
       }
       const mouse = new Vector2(event.clientX, event.clientY);
-      if (this.mode === Modes.Line) {
-        draggedLineIndex = this.nearestLineIndexFrom(mouse, CLICK_THRESHOLD);
+      if (this.mode === Modes.Line || this.mode === Modes.Contour) {
+        draggedLineIndex = this.nearestLineIndexFrom(
+          mouse,
+          CLICK_THRESHOLD,
+          this.mode === Modes.Line
+            ? this.axes
+            : this.contour.edges()
+        );
         if (draggedLineIndex === -1) {
-          this.addLine(new Line(mouse.x, mouse.y, mouse.x, mouse.y));
-          draggedLineIndex = this.lines.length - 1;
-          draggedVector2 = this.lines[draggedLineIndex].v2;
-        } else if (mouse.sub(this.lines[draggedLineIndex].v1).len() < CLICK_THRESHOLD) {
-          draggedVector2 = this.lines[draggedLineIndex].v1;
-        } else if (mouse.sub(this.lines[draggedLineIndex].v2).len() < CLICK_THRESHOLD) {
-          draggedVector2 = this.lines[draggedLineIndex].v2;
+          if (this.mode === Modes.Line) {
+            this.addLine(new Line(mouse.x, mouse.y, mouse.x, mouse.y));
+            draggedLineIndex = this.lines.length - 1;
+            draggedVector2 = this.lines[draggedLineIndex].v2;
+          } else if (this.mode === Modes.Contour) {
+            this.addContour(new Line(mouse.x, mouse.y, mouse.x, mouse.y));
+            draggedLineIndex = 0;
+            draggedVector2 = this.lines[draggedLineIndex].v1;
+          }
+        } else {
+          if (this.mode === Modes.Line) {
+            draggedLineIndex += this.contour.edgeCount();
+          }
+          if (mouse.sub(this.lines[draggedLineIndex].v1).len() < CLICK_THRESHOLD) {
+            draggedVector2 = this.lines[draggedLineIndex].v1;
+          } else if (mouse.sub(this.lines[draggedLineIndex].v2).len() < CLICK_THRESHOLD) {
+            draggedVector2 = this.lines[draggedLineIndex].v2;
+          }
         }
       } else if (this.mode === Modes.Survey) {
         draggedSurveyIndex = this.nearestSurveyIndexFrom(mouse, CLICK_THRESHOLD);
@@ -70,7 +91,7 @@ export class Polplot {
       if (event.button) {
         return;
       }
-      if (this.mode === Modes.Line) {
+      if (this.mode === Modes.Line || this.mode === Modes.Contour) {
         draggedLineIndex = -1;
         draggedVector2 = null;
       } else if (this.mode === Modes.Survey) {
@@ -90,16 +111,33 @@ export class Polplot {
       if (event.button) {
         return;
       }
-      if (this.mode === Modes.Line) {
-        if (draggedVector2) {
-          draggedVector2.x += event.movementX;
-          draggedVector2.y += event.movementY;
-          this.updateIntersectionTimes(this.lines[draggedLineIndex]);
-          this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
-        } else if (draggedLineIndex !== -1) {
-          this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
-          this.updateIntersectionTimes(this.lines[draggedLineIndex]);
-          this.renderer.drawLine(this.lines[draggedLineIndex], draggedLineIndex.toString());
+      if (this.mode === Modes.Line || this.mode === Modes.Contour) {
+        if (draggedVector2 || draggedLineIndex !== -1) {
+          if (draggedVector2) {
+            draggedVector2.x += event.movementX;
+            draggedVector2.y += event.movementY;
+          } else {
+            this.lines[draggedLineIndex].update(event.movementX, event.movementY, event.movementX, event.movementY);
+          }
+          this.updateIntersectionTimes(draggedLineIndex);
+          if (this.mode === Modes.Line) {
+            this.renderer.drawLine(
+              this.axes[draggedLineIndex - this.contour.edgeCount()],
+              (draggedLineIndex - this.contour.edgeCount()).toString()
+            );
+          } else {
+            if (draggedLineIndex === this.contour.edgeCount() - 1) {
+              this.updateIntersectionTimes(draggedLineIndex - 1);
+              this.updateIntersectionTimes(0);
+            } else if (draggedLineIndex === 0) {
+              this.updateIntersectionTimes(this.contour.edgeCount() - 1);
+              this.updateIntersectionTimes(1);
+            } else {
+              this.updateIntersectionTimes(draggedLineIndex - 1);
+              this.updateIntersectionTimes(draggedLineIndex + 1);
+            }
+            this.renderer.drawContour(this.contour);
+          }
         }
       } else if (this.mode === Modes.Survey) {
         if (draggedSurveyIndex !== -1) {
@@ -177,12 +215,15 @@ export class Polplot {
       this.updateQuantities();
     };
   }
-  nearestLineIndexFrom(v: Vector2, threshold = +Infinity): number {
+  get lines(): Line[] {
+    return this.contour.edges().concat(this.axes);
+  }
+  nearestLineIndexFrom(v: Vector2, threshold = +Infinity, lines = this.lines): number {
     let nearestLineIndex = -1;
     let nearestDist = +Infinity;
     let dist: number;
-    for (let i = 0; i < this.lines.length; i++) {
-      dist = this.lines[i].nearestTo(v).sub(v).len();
+    for (let i = 0; i < lines.length; i++) {
+      dist = lines[i].nearestTo(v).sub(v).len();
       if (dist < threshold && dist < nearestDist) {
         nearestDist = dist;
         nearestLineIndex = i;
@@ -241,17 +282,16 @@ export class Polplot {
     });
     this.renderer.drawQuantities(this.quantities);
   }
-  addLine(
-    line: Line,
+  initIntersectionData(
     at = this.lines.length,
-    lines = this.lines,
+    lineCount = this.lines.length,
     intersectionTimes = this.intersectionTimes,
     intersections = this.intersections,
     intersectionIndex = this.intersectionIndex,
   ): void {
     const newIntersectionTimes: number[] = [];
     const newIntersectionIndex: number[] = [];
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lineCount; i++) {
       intersectionTimes[i].splice(at, 0, NaN);
       intersections.push(new Vector2());
       intersectionIndex[i].splice(at, 0, intersections.length - 1);
@@ -262,32 +302,60 @@ export class Polplot {
     newIntersectionIndex.splice(at, 0, -1);
     intersectionTimes.splice(at, 0, newIntersectionTimes);
     intersectionIndex.splice(at, 0, newIntersectionIndex);
-    this.lines.splice(at, 0, line);
+  }
+  addLine(line: Line): void {
+    // append new contour at the end of lines
+    const lines = this.lines;
+    const at = lines.length;
+    this.initIntersectionData(at, at);
+    this.axes.push(line);
     this.renderer.drawLine(line, at.toString());
-    this.updateIntersectionTimes(line);
+    this.updateIntersectionTimes(at);
+  }
+  addContour(line: Line): void {
+    // TODO optimization
+    // append new contour at the begin of lines
+    const edgeCount = this.contour.edgeCount();
+    let lineCount = edgeCount + this.axes.length;
+    this.initIntersectionData(0, lineCount++);
+    this.initIntersectionData(0, lineCount++);
+    this.contour.vertices.splice(0, 0, line.v1, line.v2);
+    this.renderer.drawContour(this.contour);
+    const lines = this.lines;
+    if (edgeCount === 0) {
+      this.updateIntersectionTimes(0, lines, true);
+      this.updateIntersectionTimes(1, lines);
+    } else {
+      this.updateIntersectionTimes(0, lines, true);
+      this.updateIntersectionTimes(1, lines, true);
+      this.updateIntersectionTimes(lineCount - 1, lines);
+    }
   }
   updateIntersectionTimes(
-    line: Line,
+    at: number,
     lines = this.lines,
+    skipRender = false,
     intersectionTimes = this.intersectionTimes,
     intersections = this.intersections,
     intersectionIndex = this.intersectionIndex,
   ): void {
-    const index = lines.indexOf(line);
+    const line = lines[at];
     let times: Vector2;
     for (let i = 0; i < lines.length; i++) {
-      if (i !== index) {
+      if (i !== at) {
         times = lines[i].intersectionTimesWith(line);
-        intersectionTimes[i][index] = times.x;
-        intersectionTimes[index][i] = times.y;
-        if (i < index) {
-          intersections[intersectionIndex[i][index]] = lines[i].pointAt(times.x);
+        intersectionTimes[i][at] = times.x;
+        intersectionTimes[at][i] = times.y;
+        if (i < at) {
+          intersections[intersectionIndex[i][at]] = lines[i].pointAt(times.x);
         } else {
-          intersections[intersectionIndex[index][i]] = lines[i].pointAt(times.x);
+          intersections[intersectionIndex[at][i]] = lines[i].pointAt(times.x);
         }
       }
     }
-    this.renderIntersections();
+    if (!skipRender) {
+      this.renderIntersections();
+    }
   }
   renderIntersections(): void {
     // this.renderer.clearIntersections();
@@ -348,13 +416,16 @@ export class Polplot {
     // console.log('buildPartialsFromIntersectionTimes');
     // console.log('----------------------------------');
     // console.log('lines.length = ', lines.length);
+    const edgeCount = this.contour.edgeCount();
     const intersectionTimesSortedIndexArray = intersectionTimes
       .map((intersectionTimesAtI, i) => {
         return intersectionTimesAtI
           .map((_, j) => j)
           .filter(j => {
             return !isNaN(intersectionTimesAtI[j]) && 0 <= intersectionTimesAtI[j] && intersectionTimesAtI[j] <= 1 &&
-              !isNaN(intersectionTimes[j][i]) && 0 <= intersectionTimes[j][i] && intersectionTimes[j][i] <= 1;
+              !isNaN(intersectionTimes[j][i]) && 0 <= intersectionTimes[j][i] && intersectionTimes[j][i] <= 1 &&
+              // only takes intersection with or inside contour (TODO: remove polygons is contour concavities)
+              (i < edgeCount || j < edgeCount || this.contour.contains(this.intersections[intersectionIndex[i][j]]));
           })
           .sort((i, j) => intersectionTimesAtI[i] - intersectionTimesAtI[j]);
       });
