@@ -66,7 +66,7 @@ polygonTemplate.setAttribute('stroke', 'black');
 
 // survey
 const gSurveyTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-gSurveyTemplate.setAttribute('transform', 'translate(300, 100)');
+gSurveyTemplate.setAttribute('transform', 'translate(150, 8)');
 
 const surveyBottomPolygonTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 surveyBottomPolygonTemplate.setAttribute('fill', 'url(#earth-hatch)');
@@ -84,7 +84,21 @@ gSurveyTemplate.appendChild(surveyBottomPolygonTemplate);
 gSurveyTemplate.appendChild(surveyTopPolygonTemplate);
 
 // lithologicalLayer
+const lithologicalLayerGTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 const lithologicalLayerRectTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+const lithologicalLayerLineTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+lithologicalLayerLineTemplate.setAttribute('x1', '-50');
+lithologicalLayerLineTemplate.setAttribute('y1', '0');
+lithologicalLayerLineTemplate.setAttribute('x2', '130');
+lithologicalLayerLineTemplate.setAttribute('y2', '0');
+lithologicalLayerLineTemplate.setAttribute('stroke', 'black');
+lithologicalLayerLineTemplate.setAttribute('stroke-width', '0.8px');
+lithologicalLayerLineTemplate.setAttribute('stroke-dasharray', '5, 2');
+const lithologicalLayerTextTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+lithologicalLayerTextTemplate.setAttribute('x', '50');
+lithologicalLayerGTemplate.appendChild(lithologicalLayerRectTemplate);
+lithologicalLayerGTemplate.appendChild(lithologicalLayerLineTemplate);
+lithologicalLayerGTemplate.appendChild(lithologicalLayerTextTemplate);
 
 // earthHatch
 const hatchPattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
@@ -128,7 +142,7 @@ for (const d of hatchDs) {
 const selectTemplate = document.createElement('select');
 selectTemplate.style.position = 'absolute';
 selectTemplate.style.transform = 'translateY(-49%)';
-selectTemplate.style.left = '24px';
+selectTemplate.style.left = '8px';
 let optionTemplate = document.createElement('option');
 const values = [
   'non identifié',
@@ -332,7 +346,7 @@ export class SvgRenderer implements PolplotRenderer {
   drawSurvey(survey: Survey): void {
     this.clearContainer(this.surveyContainer);
     this.clearContainer(this.selectContainer);
-    const WIDTH = 200;
+    const WIDTH = 284;
     const THICKNESS = 10;
     const DIAMETER = 50;
     const d = `M ${(-WIDTH / 2).toFixed()}, 0 ` +
@@ -358,22 +372,35 @@ export class SvgRenderer implements PolplotRenderer {
 
     let top = 0;
     for (let i = 0; i < survey.lithology.length; i++) {
-      const lithologicalLayer = lithologicalLayerRectTemplate.cloneNode() as SVGRectElement;
-      lithologicalLayer.setAttribute('x', (-DIAMETER / 2).toFixed());
-      lithologicalLayer.setAttribute('y', top.toFixed());
-      lithologicalLayer.setAttribute('width', DIAMETER.toFixed());
-      lithologicalLayer.setAttribute('height', survey.lithology[i].depth.toFixed());
-      lithologicalLayer.setAttribute('fill', colors.get(survey.lithology[i].type));
-      lithology.appendChild(lithologicalLayer);
+      const lithologicalLayerG = lithologicalLayerGTemplate.cloneNode(true) as SVGGElement;
+      const lithologicalLayerRect = lithologicalLayerG.children[0] as SVGRectElement;
+      const lithologicalLayerLine = lithologicalLayerG.children[1] as SVGLineElement;
+      const lithologicalLayerText = lithologicalLayerG.children[2] as SVGTextElement;
+      const alti = (top + survey.lithology[i].depth) / 50;
+      lithologicalLayerLine.setAttribute('transform', `translate(0, ${(alti * 50).toFixed()})`);
+      lithologicalLayerText.setAttribute('y', (alti * 50 - 4).toFixed());
+      lithologicalLayerText.innerHTML = `- ${alti.toFixed(2).padStart(5, '0')} NGF`;
+
+      lithologicalLayerRect.setAttribute('x', (-DIAMETER / 2).toFixed());
+      lithologicalLayerRect.setAttribute('y', top.toFixed());
+      lithologicalLayerRect.setAttribute('width', DIAMETER.toFixed());
+      lithologicalLayerRect.setAttribute('height', survey.lithology[i].depth.toFixed());
+      lithologicalLayerRect.setAttribute('fill', colors.get(survey.lithology[i].type));
+      lithology.appendChild(lithologicalLayerG);
 
       const select = selectTemplate.cloneNode(true) as HTMLSelectElement;
       select.querySelector(`option[value="${survey.lithology[i].type}"]`).setAttribute('selected', 'selected');
+      const localTop = top;
       select.addEventListener('change', event => {
         survey.lithology[i].type = select.value;
-        lithologicalLayer.setAttribute('fill', colors.get(select.value));
+        lithologicalLayerRect.setAttribute('fill', colors.get(select.value));
+        const alti = (localTop + survey.lithology[i].depth) / 50;
+        lithologicalLayerLine.setAttribute('transform', `translate(0, ${(alti * 50).toFixed()})`);
+        lithologicalLayerText.setAttribute('y', (alti * 50 - 4).toFixed());
+        lithologicalLayerText.innerHTML = `- ${alti.toFixed(2).padStart(5, '0')} NGF`;
         this.lithoChangeHandler();
       });
-      select.style.top = (top + 100 + survey.lithology[i].depth / 2).toFixed() + 'px';
+      select.style.top = (top + 8 + survey.lithology[i].depth / 2).toFixed() + 'px';
 
       this.selectContainer.appendChild(select);
 

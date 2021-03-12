@@ -232,7 +232,7 @@ export class Polplot {
       }
       if (activeSurvey) {
         const mouse = new Vector2(event.offsetX, event.offsetY);
-        const offset = new Vector2(300, 100);
+        const offset = new Vector2(150, 8);
         for (const lithologicalLayer of activeSurvey.lithology) {
           const polygon = new Polygon([
             offset.add(new Vector2(-25, 0)),
