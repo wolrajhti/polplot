@@ -159,7 +159,7 @@ pTemplate.style.paddingLeft = '8px';
 
 // contour
 const contourTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-contourTemplate.setAttribute('fill', 'green');
+contourTemplate.setAttribute('fill', '#0005');
 
 export class SvgRenderer implements PolplotRenderer {
   private svg: SVGElement;

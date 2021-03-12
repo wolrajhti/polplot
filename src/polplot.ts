@@ -145,26 +145,26 @@ export class Polplot {
           this.surveys[draggedSurveyIndex].coordinates.y += event.movementY;
           this.updateSurvey(this.surveys[draggedSurveyIndex]);
         }
-      }
-      // TODO: should be in a function
-      const mouse = new Vector2(event.clientX, event.clientY);
-      let isInside = false;
-      let oldPolygonContainer = polygonContainer;
-      for (const polygon of this.polygons) {
-        if (polygon.contains(mouse)) {
-          if (polygon !== polygonContainer) {
-            this.renderer.drawPolygon(polygon, 'red');
-            polygonContainer = polygon;
+        // TODO: should be in a function
+        const mouse = new Vector2(event.clientX, event.clientY);
+        let isInside = false;
+        let oldPolygonContainer = polygonContainer;
+        for (const polygon of this.polygons) {
+          if (polygon.contains(mouse)) {
+            if (polygon !== polygonContainer) {
+              this.renderer.drawPolygon(polygon, 'red');
+              polygonContainer = polygon;
+            }
+            isInside = true;
+            break;
           }
-          isInside = true;
-          break;
         }
-      }
-      if (!isInside) {
-        polygonContainer = null;
-      }
-      if (oldPolygonContainer && oldPolygonContainer !== polygonContainer) {
-        this.renderer.drawPolygon(oldPolygonContainer, 'white');
+        if (!isInside) {
+          polygonContainer = null;
+        }
+        if (oldPolygonContainer && oldPolygonContainer !== polygonContainer) {
+          this.renderer.drawPolygon(oldPolygonContainer, 'white');
+        }
       }
     });
 
