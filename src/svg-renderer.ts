@@ -161,6 +161,37 @@ pTemplate.style.paddingLeft = '8px';
 const contourTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 contourTemplate.setAttribute('fill', '#0005');
 
+// kutch
+const gKutchTemplate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+let kutchRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+kutchRect.setAttribute('stroke', 'black');
+kutchRect.setAttribute('stroke-width', '0.8px');
+const rects: [number, number, number, number, string][] = [
+  [0, 0, 10, 4, 'black'],
+  [10, 0, 10, 4, 'white'],
+  [20, 0, 10, 4, 'black'],
+  [30, 0, 10, 4, 'white'],
+  [40, 0, 10, 4, 'black'],
+  [50, 0, 50, 4, 'white'],
+
+  [0, 5, 10, 4, 'white'],
+  [10, 5, 10, 4, 'black'],
+  [20, 5, 10, 4, 'white'],
+  [30, 5, 10, 4, 'black'],
+  [40, 5, 10, 4, 'white'],
+  [50, 5, 50, 4, 'black'],
+];
+for (const [x, y, width, height, fill] of rects) {
+  kutchRect.setAttribute('x', x.toFixed());
+  kutchRect.setAttribute('y', y.toFixed());
+  kutchRect.setAttribute('width', width.toFixed());
+  kutchRect.setAttribute('height', height.toFixed());
+  kutchRect.setAttribute('fill', fill);
+  gKutchTemplate.appendChild(kutchRect);
+  kutchRect = kutchRect.cloneNode() as SVGRectElement;
+}
+
 export class SvgRenderer implements PolplotRenderer {
   private svg: SVGElement;
   private sidebarDiv: HTMLDivElement;
@@ -177,8 +208,10 @@ export class SvgRenderer implements PolplotRenderer {
   private handlers: Record<string, (event: MouseEvent) => void> = {};
   public lithoChangeHandler: () => void;
   private svgContourPath: SVGPathElement;
+  private svgKutchG: SVGGElement;
   constructor() {
     this.svgContourPath = contourTemplate.cloneNode() as SVGPathElement;
+    this.svgKutchG = gKutchTemplate.cloneNode(true) as SVGGElement;
     this.svg = document.querySelector('.content');
     this.sidebarDiv = document.querySelector('.sidebar');
     this.sidebarSvg = document.querySelector('.sidebar > svg');
@@ -187,6 +220,7 @@ export class SvgRenderer implements PolplotRenderer {
     this.svg.appendChild(this.polygonContainer);
     this.svg.appendChild(this.lineContainer);
     this.svg.appendChild(this.pointContainer);
+    this.svg.appendChild(this.svgKutchG);
     this.quantitiesContainer = document.querySelector('.quantities');
     this.sidebarSvg.appendChild(this.surveyContainer);
     this.sidebarDiv.appendChild(this.selectContainer);
@@ -354,7 +388,7 @@ export class SvgRenderer implements PolplotRenderer {
     this.clearContainer(this.surveyContainer);
     this.clearContainer(this.selectContainer);
   }
-  drawQuantities(quantities: Map<string, number>): void {
+  drawQuantities(quantities: Map<string, number>, scale: number): void {
     this.clearContainer(this.quantitiesContainer);
     const p = pTemplate.cloneNode() as HTMLParagraphElement;
     p.innerHTML = `Volumes :`;
@@ -363,9 +397,18 @@ export class SvgRenderer implements PolplotRenderer {
     this.quantitiesContainer.appendChild(p);
     quantities.forEach((quantity, type) => {
       const p = pTemplate.cloneNode() as HTMLParagraphElement;
-      p.innerHTML = `${type} (${(quantity / (10 * 10 * 50)).toFixed(2)} m³)`;
+      p.innerHTML = `${type} (${(quantity / (Math.pow(scale, 2) * 50)).toFixed(2)} m³)`;
       p.style.borderLeft = `8px solid ${colors.get(type)}`;
       this.quantitiesContainer.appendChild(p);
     });
+  }
+  drawKutch(kutch: Line): void {
+    const angle = 180 * kutch.v2.sub(kutch.v1).angle() / Math.PI;
+    this.svgKutchG.setAttribute(
+      'transform',
+      `translate(${kutch.v1.x.toFixed()}, ${kutch.v1.y.toFixed()}) ` +
+      `rotate(${isNaN(angle) ? 0 : angle}) ` +
+      `scale(${kutch.len() / 100}, 1)`
+    );
   }
 }

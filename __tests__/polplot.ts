@@ -1,4 +1,5 @@
 import { PolplotRenderer } from '../src/interfaces/polplot-renderer';
+import { Line } from '../src/line';
 import { Polplot } from '../src/polplot';
 import { Polygon } from '../src/polygon';
 import { Survey } from '../src/survey';
@@ -20,8 +21,9 @@ class FakeRenderer implements PolplotRenderer {
   drawSurvey(survey: Survey): void { }
   clearSurvey(): void { }
   lithoChangeHandler(): void { }
-  drawQuantities(quantities: Map<string, number>): void { }
-  drawContour(polygon: Polygon): void {}
+  drawQuantities(quantities: Map<string, number>, scale: number): void { }
+  drawContour(polygon: Polygon): void { }
+  drawKutch(line: Line): void { }
 }
 
 describe('PolPlot', () => {

@@ -9,12 +9,14 @@ const CLICK_THRESHOLD = 20;
 
 const enum Modes {
   Contour,
+  Kutch,
   Axes,
   Surveys
 }
 
 export class Polplot {
   axes: Line[] = [];
+  kutch: Line = new Line(50, 200, 150, 200);
   contour = new Polygon();
   intersectionTimes: number[][] = [];
   intersections: Vector2[] = [];
@@ -35,6 +37,11 @@ export class Polplot {
         this.renderer.clearSurvey();
         document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
         document.querySelector('#edit-contour').classList.add('selected');
+      } else if (event.key === 'k') {
+        this.mode = Modes.Kutch;
+        this.renderer.clearSurvey();
+        document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+        document.querySelector('#edit-kutch').classList.add('selected');
       } else if (event.key === 'a') {
         this.mode = Modes.Axes;
         this.renderer.clearSurvey();
@@ -65,7 +72,14 @@ export class Polplot {
       this.mode = Modes.Surveys;
     });
 
+    document.querySelector('#edit-kutch').addEventListener('click', event => {
+      document.querySelectorAll('.button').forEach((div: HTMLDivElement) => div.classList.remove('selected'));
+      (event.target as HTMLDivElement).classList.add('selected');
+      this.mode = Modes.Kutch;
+    });
+
     this.updateQuantities();
+    this.renderer.drawKutch(this.kutch);
 
     let draggedLineIndex = -1;
     let draggedVector2: Vector2;
@@ -104,6 +118,12 @@ export class Polplot {
             draggedVector2 = this.lines[draggedLineIndex].v2;
           }
         }
+      } else if (this.mode === Modes.Kutch) {
+        if (mouse.sub(this.kutch.v1).len() < CLICK_THRESHOLD) {
+          draggedVector2 = this.kutch.v1;
+        } else if (mouse.sub(this.kutch.v2).len() < CLICK_THRESHOLD) {
+          draggedVector2 = this.kutch.v2;
+        }
       } else if (this.mode === Modes.Surveys) {
         draggedSurveyIndex = this.nearestSurveyIndexFrom(mouse, CLICK_THRESHOLD);
         if (draggedSurveyIndex === -1) {
@@ -119,7 +139,7 @@ export class Polplot {
       if (event.button) {
         return;
       }
-      if (this.mode === Modes.Axes || this.mode === Modes.Contour) {
+      if (this.mode === Modes.Axes || this.mode === Modes.Contour || this.mode === Modes.Kutch) {
         draggedLineIndex = -1;
         draggedVector2 = null;
       } else if (this.mode === Modes.Surveys) {
@@ -166,6 +186,14 @@ export class Polplot {
             }
             this.renderer.drawContour(this.contour);
           }
+        }
+      } else if (this.mode === Modes.Kutch) {
+        if (draggedVector2) {
+          draggedVector2.x += event.movementX;
+          draggedVector2.y += event.movementY;
+          this.renderer.drawKutch(this.kutch);
+          this.updateQuantities();
+          this.surveys.forEach(survey => this.updateSurvey(survey));
         }
       } else if (this.mode === Modes.Surveys) {
         if (draggedSurveyIndex !== -1) {
@@ -246,6 +274,9 @@ export class Polplot {
   get lines(): Line[] {
     return this.contour.edges().concat(this.axes);
   }
+  get scale(): number {
+    return this.kutch.len() / 10;
+  }
   nearestLineIndexFrom(v: Vector2, threshold = +Infinity, lines = this.lines): number {
     let nearestLineIndex = -1;
     let nearestDist = +Infinity;
@@ -286,7 +317,7 @@ export class Polplot {
       new LithologicalLayer('non identifié', 50),
     ], container);
     this.surveys.push(survey);
-    this.renderer.drawPoint(coordinates, container ? (container.area() / (10 * 10)).toFixed(2) + ' m2' : '');
+    this.renderer.drawPoint(coordinates, container ? (container.area() / Math.pow(this.scale, 2)).toFixed(2) + ' m2' : '');
     this.updateQuantities();
   }
   // TODO: cleanup add update render and other weird functions
@@ -298,7 +329,7 @@ export class Polplot {
         break;
       }
     }
-    this.renderer.drawPoint(survey.coordinates, survey.polygon ? (survey.polygon.area() / (10 * 10)).toFixed(2) + ' m2' : '');
+    this.renderer.drawPoint(survey.coordinates, survey.polygon ? (survey.polygon.area() / Math.pow(this.scale, 2)).toFixed(2) + ' m2' : '');
     this.updateQuantities();
   }
   updateQuantities(): void {
@@ -308,7 +339,7 @@ export class Polplot {
         this.quantities.set(type, (this.quantities.get(type) || 0) + quantity);
       });
     });
-    this.renderer.drawQuantities(this.quantities);
+    this.renderer.drawQuantities(this.quantities, this.scale);
   }
   initIntersectionData(
     at = this.lines.length,

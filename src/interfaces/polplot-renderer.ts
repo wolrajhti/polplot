@@ -19,6 +19,7 @@ export interface PolplotRenderer {
   drawSurvey(survey: Survey): void;
   clearSurvey(): void;
   lithoChangeHandler(): void;
-  drawQuantities(quantities: Map<string, number>): void;
+  drawQuantities(quantities: Map<string, number>, scale: number): void;
   drawContour(polygon: Polygon): void;
+  drawKutch(line: Line): void;
 }
